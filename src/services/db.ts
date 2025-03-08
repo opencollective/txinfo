@@ -1,7 +1,6 @@
 import Dexie, { Table } from "dexie";
-import { Transaction } from "@/utils/crypto";
 import { Event as NostrEvent } from "nostr-tools";
-import { URI, Address, TxHash } from "@/providers/NostrProvider";
+import { Transaction, URI, Address, TxHash } from "@/types";
 
 // Define interfaces for our database tables
 interface TransactionRecord extends Transaction {

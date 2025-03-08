@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { updateProfile, useNostr, useProfile } from "@/providers/NostrProvider";
+import { useNostr, useProfile } from "@/providers/NostrProvider";
 import CopyableValue from "./CopyableValue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

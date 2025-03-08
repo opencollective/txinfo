@@ -3,9 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import chains from "../chains.json";
 import { ExternalLink } from "lucide-react";
-import CopyableValue from "./CopyableValue";
 import { useTokenDetails } from "@/utils/crypto";
-import { JsonRpcProvider } from "ethers";
 export default function TokenDetails({
   chain,
   address,

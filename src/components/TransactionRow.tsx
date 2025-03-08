@@ -20,8 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import NotesList from "@/components/NotesList";
 import { URI, useNostr } from "@/providers/NostrProvider";
-import { Transaction } from "@/utils/crypto";
-import { type Address, type TxHash } from "@/hooks/nostr";
+import type { Transaction, Address, TxHash } from "@/types";
 interface TransactionRowProps {
   tx: Transaction;
   chain: string;
@@ -42,14 +41,13 @@ export function TransactionRow({
   chain,
   chainId,
   expanded,
-  onToggleExpand,
 }: TransactionRowProps) {
   const [newDescription, setNewDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const { publishNote, notesByURI } = useNostr();
+  const { publishNote, notesByURI, profiles } = useNostr();
 
   // Profile editing states
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -71,6 +69,10 @@ export function TransactionRow({
   );
 
   const uri = `${chainId}:tx:${tx.txHash}` as URI;
+
+  const lastNote =
+    notesByURI[uri] && notesByURI[uri][notesByURI[uri].length - 1];
+
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
     if (isEditing && lastNote) {
@@ -101,7 +103,7 @@ export function TransactionRow({
         inputRef.current?.focus();
       }, 0);
     }
-  }, [isEditing, notesByURI]);
+  }, [isEditing, notesByURI, lastNote]);
 
   const getDicebearUrl = (address: string) => {
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`;
@@ -164,9 +166,14 @@ export function TransactionRow({
       // Extract hashtags and clean description
       const { tags, cleanDescription } = extractHashtags(editDescription);
 
-      await publish(chainId, tx.txHash, {
-        description: cleanDescription,
-        tags: tags,
+      await publishNote(uri, {
+        content: cleanDescription,
+        tags: tags.map((tag) => {
+          if (tag.includes(":")) {
+            return tag.split(":");
+          }
+          return ["t", tag];
+        }),
       });
 
       setIsEditing(false);
@@ -248,9 +255,6 @@ export function TransactionRow({
 
   const fromProfile = getProfileFromNotes(tx.from);
   const toProfile = getProfileFromNotes(tx.to);
-
-  const lastNote =
-    notesByURI[uri] && notesByURI[uri][notesByURI[uri].length - 1];
 
   return (
     <div className="space-y-4" key={tx.txHash}>
@@ -387,7 +391,7 @@ export function TransactionRow({
       {/* Expanded Notes */}
       {expanded && (
         <div className="pl-16 border-l-2">
-          <NotesList notes={notesByURI[uri]} profiles={[]} />
+          <NotesList notes={notesByURI[uri]} profiles={profiles} />
         </div>
       )}
 

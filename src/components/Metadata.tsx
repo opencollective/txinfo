@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useDebounce } from "use-debounce";
 import EditNoteForm from "@/components/EditNoteForm";
 import NotesList from "@/components/NotesList";
-import { insertEventIntoDescendingList } from "@/utils/helpers";
 import { URI, useNostr } from "@/providers/NostrProvider";
 export interface Metadata {
   name?: string;

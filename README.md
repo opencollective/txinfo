@@ -60,6 +60,7 @@ Within a `NostrProvider`
 <NostrProvider>{children}</NostrProvider>
 ```
 
+```
 const { notesByURI, subscribeToNotesByURI, updateProfile } = useNostr();
 
 const uris = [
@@ -68,14 +69,15 @@ const uris = [
 ];
 
 subscribeToURI(uris);
+```
 
+### Publish metadata
 
-// Publish metadata
-````
+```
 const { publishNote } = useNostr();
 ```
 
-requires `localStorage.getItem("nostr_nsec");`
+(requires `localStorage.getItem("nostr_nsec");`)
 
 ```
 const uri = uris[0];

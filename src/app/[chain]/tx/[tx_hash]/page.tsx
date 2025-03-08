@@ -16,7 +16,7 @@ export default async function Page({
     <div className="app">
       <div className="flex flex-col gap-4">
         <TxDetails uri={uri} provider={provider} />
-        <Metadata uri={uri} provider={provider} />
+        <Metadata uri={uri} />
       </div>
     </div>
   );

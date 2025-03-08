@@ -26,13 +26,7 @@ import { cn } from "@/lib/utils";
 import { Check, X, Coins } from "lucide-react";
 import type { Token } from "@/types/index.d.ts";
 import { useState, useMemo } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfToday,
-  isWithinInterval,
-} from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfToday } from "date-fns";
 import { truncateAddress } from "@/utils/crypto";
 
 type DateRange = {
@@ -159,7 +153,7 @@ export default function Filters({
                     key={token.address}
                     value={token.address}
                     className="cursor-pointer"
-                    onSelect={(currentValue) => {
+                    onSelect={() => {
                       if (selectedTokens.includes(token)) {
                         return updateSelectedTokens(
                           selectedTokens.filter((t) => t !== token)

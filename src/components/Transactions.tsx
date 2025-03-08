@@ -1,43 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { ethers, formatEther, JsonRpcProvider } from "ethers";
-import {
-  processBlockRange,
-  getBlockRangeForAddress,
-  truncateAddress,
-} from "../utils/crypto";
+import { useMemo, useRef, useState, useEffect } from "react";
+import { JsonRpcProvider } from "ethers";
+import { processBlockRange, getBlockRangeForAddress } from "../utils/crypto";
 import chains from "../chains.json";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { TransactionRow } from "@/components/TransactionRow";
-import { type Address, type TxHash } from "@/hooks/nostr";
-
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfToday,
-  isWithinInterval,
-} from "date-fns";
-
+import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandList,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Check, X } from "lucide-react";
-import type { Token } from "@/types/index.d.ts";
+import { X } from "lucide-react";
+import type { Address, Token } from "@/types";
 
 interface Props {
   address: string;
@@ -45,7 +18,7 @@ interface Props {
 }
 
 const LIMIT_PER_PAGE = 50;
-import { type Transaction } from "@/utils/crypto";
+import type { Transaction } from "@/types/index.d.ts";
 import { URI, useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
@@ -72,8 +45,11 @@ export default function Transactions({ address, chain }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const chainConfig = chains[chain as keyof typeof chains];
-  const rpc =
-    typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc;
+  const rpc = useMemo(
+    () =>
+      typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
+    [chainConfig]
+  );
   const provider = useRef<JsonRpcProvider>(new JsonRpcProvider(rpc[0]));
   const limit = 10000;
   let errorCount = 0;
@@ -135,9 +111,9 @@ export default function Transactions({ address, chain }: Props) {
   }, [transactions, transactionsFilter]);
 
   useEffect(() => {
-    const cachedTransactions = localStorage.getItem(
-      `${chain}:${address}:transactions`
-    );
+    // const cachedTransactions = localStorage.getItem(
+    //   `${chain}:${address}:transactions`
+    // );
     // if (cachedTransactions) {
     //   const txs = JSON.parse(cachedTransactions);
     //   console.log("txs", txs);
@@ -152,21 +128,15 @@ export default function Transactions({ address, chain }: Props) {
     const fetchAllTransactions = async () => {
       setIsLoading(true);
       try {
-        const blockRange = await getBlockRangeForAddress(
-          chain,
-          address,
-          provider.current
-        );
+        const blockRange = await getBlockRangeForAddress(chain, address);
 
         const lastBlock =
-          blockRange.lastBlock || (await provider.current.getBlockNumber());
+          blockRange?.lastBlock || (await provider.current.getBlockNumber());
         let fromBlock = lastBlock - (lastBlock % limit);
         let toBlock = lastBlock;
         const firstBlock = blockRange?.firstBlock || 1;
-        console.log(">>> firstBlock", firstBlock);
-        console.log(">>> lastBlock", lastBlock);
-        console.log(">>> fromBlock", fromBlock);
-        console.log(">>> toBlock", toBlock);
+        console.log(">>> total block range", firstBlock, lastBlock);
+        console.log(">>> current block range", fromBlock, toBlock);
         setProgress({
           fromBlock,
           toBlock,
@@ -194,7 +164,7 @@ export default function Transactions({ address, chain }: Props) {
             if (newTxs && newTxs.length > 0) {
               // Update state with all transactions so far
               setTransactions((prevTxs) => {
-                const uniques = newTxs.filter((tx) => {
+                const uniques = newTxs.filter((tx: Transaction) => {
                   const isDuplicate = prevTxs.some(
                     (t) => t.txHash === tx.txHash
                   );
@@ -241,10 +211,19 @@ export default function Transactions({ address, chain }: Props) {
     };
 
     fetchAllTransactions();
-  }, [address, chain]);
+  }, [
+    address,
+    chain,
+    transactions,
+    transactionsFilter,
+    provider,
+    limit,
+    errorCount,
+    rpc,
+  ]);
 
   // Subscribe to notes for all transactions at once
-  const { notesByURI, subscribeToNotesByURI } = useNostr();
+  const { subscribeToNotesByURI } = useNostr();
 
   // Initial load
   useEffect(() => {
@@ -256,7 +235,7 @@ export default function Transactions({ address, chain }: Props) {
     });
 
     subscribeToNotesByURI(Array.from(uris) as URI[]);
-  }, [filteredTransactions]);
+  }, [filteredTransactions, chainConfig, subscribeToNotesByURI]);
 
   // Calculate transaction statistics based on filtered transactions
 

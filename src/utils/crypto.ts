@@ -4,8 +4,8 @@ import { ethers } from "ethers";
 import ERC20_ABI from "../erc20.abi.json";
 import chains from "../chains.json";
 import { useState, useEffect, useRef } from "react";
-import { type TxHash, type Address } from "@/hooks/nostr";
-import type { Token, Transaction } from "@/types/index.d.ts";
+import type { Transaction, Token } from "@/types/index.d.ts";
+
 // const cache = {};
 // const localStorage =
 //   typeof window !== "undefined"
@@ -94,8 +94,24 @@ export async function getTokenDetails(
   }
 }
 
+type LogEvent = {
+  name: string;
+  args: string[];
+  address: string;
+};
+
+type TxDetails = {
+  chainId: number;
+  hash: string;
+  contract_address: string;
+  name: string;
+  args: string[];
+  token: Token;
+  events: LogEvent[];
+};
+
 export function useTxDetails(chain: string, txHash: string) {
-  const [txDetails, setTxDetails] = useState<Transaction | null>(null);
+  const [txDetails, setTxDetails] = useState<TxDetails | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -175,8 +191,8 @@ export async function getTxDetails(
             args: Array.from(parsedLog?.args || []),
             address: log.address,
           };
-        } catch (error) {
-          console.log("Could not parse log:", log);
+        } catch (err) {
+          console.log("Could not parse log:", log, err);
           return null;
         }
       })
@@ -371,8 +387,7 @@ export async function isEOA(
 
 export async function getBlockRangeForAddress(
   chain: string,
-  address: string,
-  provider: ethers.JsonRpcProvider
+  address: string
 ): Promise<null | { firstBlock: number; lastBlock: number | undefined }> {
   // const key = `${chain}:${address}:firstBlock`;
   // const cached = localStorage.getItem(key);

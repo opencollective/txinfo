@@ -9,7 +9,8 @@ import {
 import { cn } from "@/lib/utils";
 import { ethers } from "ethers";
 import { Address } from "@/providers/NostrProvider";
-import { Transaction, truncateAddress } from "@/utils/crypto";
+import { truncateAddress } from "@/utils/crypto";
+import type { Transaction } from "@/types/index.d.ts";
 import { useMemo } from "react";
 import type { Token } from "@/types/index.d.ts";
 
@@ -75,7 +76,7 @@ export default function StatsCards({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Intl.NumberFormat().format(stats.received.toFixed(2))}
+                {Intl.NumberFormat().format(stats.received)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
                   {tokens[0].symbol}
                 </span>
@@ -93,7 +94,7 @@ export default function StatsCards({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Intl.NumberFormat().format(stats.spent.toFixed(2))}
+                {Intl.NumberFormat().format(stats.spent)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
                   {tokens[0].symbol}
                 </span>
@@ -130,7 +131,7 @@ export default function StatsCards({
                 )}
               >
                 {stats.net > 0 ? "+" : ""}
-                {Intl.NumberFormat().format(stats.net.toFixed(2))}
+                {Intl.NumberFormat().format(stats.net)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
                   {tokens[0].symbol}
                 </span>
@@ -182,17 +183,15 @@ export default function StatsCards({
                   )}
                 >
                   {stats.net > 0 ? "+" : ""}
-                  {Intl.NumberFormat()
-                    .format(stats.net.toFixed(0))
-                    .replace("-0", "0")}
+                  {Intl.NumberFormat().format(stats.net).replace("-0", "0")}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-center border-t pt-3">
                 <p className="text-sm font-medium text-green-500">
-                  +{Intl.NumberFormat().format(stats.received.toFixed(0))}
+                  +{Intl.NumberFormat().format(stats.received)}
                 </p>
                 <p className="text-sm font-medium text-red-500">
-                  -{Intl.NumberFormat().format(stats.spent.toFixed(0))}
+                  -{Intl.NumberFormat().format(stats.spent)}
                 </p>
               </div>
             </CardContent>

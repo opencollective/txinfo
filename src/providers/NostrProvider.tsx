@@ -30,6 +30,7 @@ export type NostrNote = {
 };
 
 export type NostrProfile = {
+  npub?: string;
   name: string;
   about: string;
   picture: string;
@@ -62,16 +63,19 @@ interface NostrContextType {
 
 const NostrContext = createContext<NostrContextType | null>(null);
 
+export type RelaySubscription = {
+  close: () => void;
+};
+
 export function NostrProvider({ children }: { children: React.ReactNode }) {
   const [pool, setPool] = useState<SimplePool | null>(null);
   const [connectedRelays, setConnectedRelays] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [notesByURI, setNotesByURI] = useState<Record<string, NostrEvent[]>>(
     {}
   ); // Stores kind 1111 events
   const [profiles, setProfiles] = useState<Record<string, NostrProfile>>({});
-  const subRef = useRef<any | null>(null);
-  const profilesSubscriptionsRef = useRef<any | null>(null);
+  const subRef = useRef<RelaySubscription | undefined>(null);
+  const profilesSubscriptionsRef = useRef<RelaySubscription | undefined>(null);
   const subscribedURIs = useRef<URI[]>([]);
   const subscribedProfiles = useRef<string[]>([]);
 
@@ -270,14 +274,6 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     });
     await Promise.any(pool.publish(relays, signedEvent));
   };
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen text-red-500">
-        Error: {error}
-      </div>
-    );
-  }
 
   // Proceed if at least one relay is connected
   // const isReady = pool && connectedRelays.length > 0;

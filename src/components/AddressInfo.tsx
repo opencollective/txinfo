@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import chains from "../chains.json";
-import { ExternalLink, Loader2, Edit } from "lucide-react";
+import { ExternalLink, Edit } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { Tag } from "@/components/ui/tag";
 import { useNostr, type URI, type Address } from "@/providers/NostrProvider";

@@ -20,3 +20,11 @@ export interface Transaction {
   token: Token;
   blockNumber: number;
 }
+
+export type ChainConfig = {
+  id: number;
+  rpc: string | string[];
+  explorer_url: string;
+  explorer_api?: string;
+  explorer_name: string;
+};

@@ -1,4 +1,4 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, KeyboardEvent } from "react";
 import { useNostr, type URI } from "@/providers/NostrProvider";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
@@ -68,7 +68,7 @@ export default function NoteForm({
           ...newTags,
         ],
       });
-      onCancel();
+      onCancel?.();
     } catch (error) {
       console.error("Error publishing note:", error);
       alert("Failed to publish note. Please try again.");
@@ -81,7 +81,7 @@ export default function NoteForm({
     // Cancel editing when Escape key is pressed
     if (e.key === "Escape") {
       e.preventDefault();
-      onCancel();
+      onCancel?.();
     }
   };
 

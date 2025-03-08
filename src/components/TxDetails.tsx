@@ -1,39 +1,24 @@
 "use client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import chains from "../chains.json";
 import { ExternalLink } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { useTxDetails } from "@/utils/crypto";
 import { ethers } from "ethers";
 import { URI } from "@/providers/NostrProvider";
-
-type TokenDetails = {
-  name: string;
-  symbol: string;
-  decimals: number;
-  address: string;
-};
-
-type TxDetails = {
-  hash: string;
-  name: string;
-  args: any[];
-  chainId: string;
-  events?: Array<{
-    name: string;
-    args: Record<string, string>;
-    address: string;
-  }>;
-};
+import type { ChainConfig } from "@/types";
+import chains from "@/chains.json";
 
 export default function TxDetails({
   uri,
-  provider,
 }: {
   uri: URI;
   provider: ethers.JsonRpcProvider;
 }) {
+  const parts = uri.split(":");
+  const chain = parts[0];
+  const tx_hash = parts[2];
+  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
   const [txDetails, isLoading] = useTxDetails(chain, tx_hash);
 
   console.log("txDetails", txDetails);
@@ -53,12 +38,13 @@ export default function TxDetails({
         <CardTitle className="flex items-center justify-between">
           <span>Transaction Details</span>
           <a
-            href={`${chain?.explorer_url}/tx/${txDetails.hash}`}
+            href={`${chainConfig?.explorer_url}/tx/${tx_hash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
           >
-            View on {chain?.explorer_name} <ExternalLink className="h-4 w-4" />
+            View on {chainConfig?.explorer_name}{" "}
+            <ExternalLink className="h-4 w-4" />
           </a>
         </CardTitle>
       </CardHeader>
@@ -66,7 +52,7 @@ export default function TxDetails({
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <div className="text-sm font-medium">Transaction Hash</div>
-          <CopyableValue value={txDetails.hash} />
+          <CopyableValue value={tx_hash} />
         </div>
 
         <div className="space-y-2">
@@ -74,7 +60,7 @@ export default function TxDetails({
           <div className="flex items-center gap-2">
             <span className="text-lg">{token?.name}</span>
             <a
-              href={`${chain?.explorer_url}/token/${token.address}`}
+              href={`${chainConfig?.explorer_url}/token/${token.address}`}
               target="_blank"
               rel="noopener noreferrer"
               className="no-underline"
