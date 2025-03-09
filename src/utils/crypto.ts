@@ -294,7 +294,6 @@ export async function getBlockRange(
     res.cached = true;
     return res;
   }
-  // @ts-expect-error useCache is not defined in the window object
   // console.log(">>> skipping cache", key, cached, window.useCache);
   localStorage.removeItem(key); // remove previous cache
   console.log(

@@ -183,7 +183,7 @@ export default function StatsCards({
           <Card key={token} className="col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
               <CardTitle className="text-sm font-medium">
-                {stats.token.symbol?.length > 6 ? (
+                {stats.token?.symbol && stats.token?.symbol?.length > 6 ? (
                   <span title={stats.token.symbol}>
                     {stats.token.symbol?.substring(0, 6)}...
                   </span>
