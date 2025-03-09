@@ -184,22 +184,23 @@ export default function Transactions({ address, chain }: Props) {
 
             allTransactions.current.push(...newTxs);
 
-            // if (newTxs && newTxs.length > 0) {
-            //   // Update state with all transactions so far
-            //   setTransactions((prevTxs) => {
-            //     const uniques = newTxs.filter((tx: Transaction) => {
-            //       const isDuplicate = prevTxs.some(
-            //         (t) => t.txHash === tx.txHash
-            //       );
-            //       // if (isDuplicate) {
-            //       //   console.log("!!! duplicate", tx);
-            //       // }
-            //       return !isDuplicate;
-            //     });
-
-            //     return [...prevTxs, ...uniques];
-            //   });
-            // }
+            if (newTxs && newTxs.length > 0) {
+              // This triggers a re-render of the component which we don't want
+              // Update state with all transactions so far
+              // setTransactions((prevTxs) => {
+              //   // const uniques = newTxs.filter((tx: Transaction) => {
+              //   //   const isDuplicate = prevTxs.some(
+              //   //     (t) => t.txHash === tx.txHash
+              //   //   );
+              //   //   // if (isDuplicate) {
+              //   //   //   console.log("!!! duplicate", tx);
+              //   //   // }
+              //   //   return !isDuplicate;
+              //   // });
+              //   // return [...prevTxs, ...uniques];
+              //   return [...prevTxs, ...newTxs];
+              // });
+            }
             toBlock = fromBlock - 1;
             fromBlock = fromBlock - limit;
           } catch (error) {
@@ -220,11 +221,22 @@ export default function Transactions({ address, chain }: Props) {
           }
         }
 
-        setTransactions(allTransactions.current);
+        setTransactions((prevTxs) => {
+          const uniques = allTransactions.current.filter((tx: Transaction) => {
+            const isDuplicate = prevTxs.some((t) => t.txHash === tx.txHash);
+            // if (isDuplicate) {
+            //   console.log("!!! duplicate", tx);
+            // }
+            return !isDuplicate;
+          });
+
+          allTransactions.current = uniques;
+          return uniques;
+        });
         // Store in localStorage
         setItem(
           `${chain}:${address}:transactions`,
-          JSON.stringify(transactions)
+          JSON.stringify(allTransactions.current)
         );
       } catch (error) {
         console.error("Error fetching transactions:", error);
