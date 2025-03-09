@@ -119,7 +119,7 @@ export default function Transactions({ address, chain }: Props) {
 
   const totalIterations = useRef(0);
 
-  useEffect(() => {
+  useMemo(() => {
     // const cachedTransactions = getItem(
     //   `${chain}:${address}:transactions`
     // );
