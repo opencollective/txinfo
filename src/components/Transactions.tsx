@@ -11,6 +11,11 @@ import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { X } from "lucide-react";
 import type { Address, Token } from "@/types";
+import { cn } from "@/lib/utils";
+import type { Transaction } from "@/types/index.d.ts";
+import { URI, useNostr } from "@/providers/NostrProvider";
+import StatsCards from "./StatsCards";
+import Filters, { type Filter } from "./Filters";
 
 interface Props {
   address: string;
@@ -18,10 +23,6 @@ interface Props {
 }
 
 const LIMIT_PER_PAGE = 50;
-import type { Transaction } from "@/types/index.d.ts";
-import { URI, useNostr } from "@/providers/NostrProvider";
-import StatsCards from "./StatsCards";
-import Filters, { type Filter } from "./Filters";
 
 export default function Transactions({ address, chain }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -51,6 +52,7 @@ export default function Transactions({ address, chain }: Props) {
     [chainConfig]
   );
   const provider = useRef<JsonRpcProvider>(new JsonRpcProvider(rpc[0]));
+  const allTransactions = useRef<Transaction[]>([]);
   const limit = 10000;
   let errorCount = 0;
 
@@ -165,7 +167,7 @@ export default function Transactions({ address, chain }: Props) {
           //   toBlock
           // );
           try {
-            const newTxs = await processBlockRange(
+            const newTxs: Transaction[] = await processBlockRange(
               chain,
               address,
               fromBlock,
@@ -180,22 +182,24 @@ export default function Transactions({ address, chain }: Props) {
               firstBlock,
             });
 
-            if (newTxs && newTxs.length > 0) {
-              // Update state with all transactions so far
-              setTransactions((prevTxs) => {
-                const uniques = newTxs.filter((tx: Transaction) => {
-                  const isDuplicate = prevTxs.some(
-                    (t) => t.txHash === tx.txHash
-                  );
-                  // if (isDuplicate) {
-                  //   console.log("!!! duplicate", tx);
-                  // }
-                  return !isDuplicate;
-                });
+            allTransactions.current.push(...newTxs);
 
-                return [...prevTxs, ...uniques];
-              });
-            }
+            // if (newTxs && newTxs.length > 0) {
+            //   // Update state with all transactions so far
+            //   setTransactions((prevTxs) => {
+            //     const uniques = newTxs.filter((tx: Transaction) => {
+            //       const isDuplicate = prevTxs.some(
+            //         (t) => t.txHash === tx.txHash
+            //       );
+            //       // if (isDuplicate) {
+            //       //   console.log("!!! duplicate", tx);
+            //       // }
+            //       return !isDuplicate;
+            //     });
+
+            //     return [...prevTxs, ...uniques];
+            //   });
+            // }
             toBlock = fromBlock - 1;
             fromBlock = fromBlock - limit;
           } catch (error) {
@@ -216,6 +220,7 @@ export default function Transactions({ address, chain }: Props) {
           }
         }
 
+        setTransactions(allTransactions.current);
         // Store in localStorage
         setItem(
           `${chain}:${address}:transactions`,
@@ -313,21 +318,25 @@ export default function Transactions({ address, chain }: Props) {
       })}
 
       {/* Progress Bar */}
-      {isScanning && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
-          <div className="container max-w-7xl mx-auto space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>
-                Scanning blocks{" "}
-                {(progress.lastBlock - progress.toBlock).toLocaleString()} /{" "}
-                {(progress.lastBlock - progress.firstBlock).toLocaleString()}
-              </span>
-              <span>{progressPercentage}%</span>
-            </div>
-            <Progress value={progressPercentage} className="w-full" />
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t",
+          "transition-opacity duration-200",
+          isScanning ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+      >
+        <div className="container max-w-7xl mx-auto space-y-2">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>
+              Scanning blocks{" "}
+              {(progress.lastBlock - progress.toBlock).toLocaleString()} /{" "}
+              {(progress.lastBlock - progress.firstBlock).toLocaleString()}
+            </span>
+            <span>{progressPercentage}%</span>
           </div>
+          <Progress value={progressPercentage} className="w-full" />
         </div>
-      )}
+      </div>
       {error && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
           <div className="container max-w-7xl mx-auto space-y-2">

@@ -236,7 +236,7 @@ export async function processBlockRange(
   fromBlock: number,
   toBlock: number,
   provider: ethers.JsonRpcProvider
-) {
+): Promise<Transaction[]> {
   const key = `${chain}:${address}[${fromBlock}:${toBlock}]`.toLowerCase();
   const cached = localStorage.getItem(key);
   // @ts-expect-error useCache is not defined in the window object
@@ -266,6 +266,8 @@ export async function processBlockRange(
     );
     localStorage.setItem(key, JSON.stringify(newTxs));
     return newTxs;
+  } else {
+    return [];
   }
 }
 
