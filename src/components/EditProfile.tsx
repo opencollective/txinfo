@@ -18,6 +18,16 @@ interface Props {
   npub?: string;
 }
 
+const getItem = (key: string) => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(key);
+};
+
+// const setItem = (key: string, value: string) => {
+//   if (typeof window === "undefined") return;
+//   localStorage.setItem(key, value);
+// };
+
 export default function EditProfile({ npub }: Props) {
   const { profile } = useProfile();
   const [formData, setFormData] = useState({
@@ -31,17 +41,17 @@ export default function EditProfile({ npub }: Props) {
   const [feedback, setFeedback] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
 
-  if (!npub) {
+  if (!npub && profile) {
     npub = profile.npub;
   }
 
   // Update form when profile changes
   useEffect(() => {
     setFormData({
-      name: profile.name || "",
-      about: profile.about || "",
-      picture: profile.picture || "",
-      website: profile.website || "",
+      name: profile?.name || "",
+      about: profile?.about || "",
+      picture: profile?.picture || "",
+      website: profile?.website || "",
     });
   }, [profile]);
 
@@ -74,7 +84,7 @@ export default function EditProfile({ npub }: Props) {
     setFormData({ ...formData, [attr]: value });
   };
 
-  const editable = npub === profile.npub;
+  const editable = npub === profile?.npub;
 
   console.log("profile", profile);
 
@@ -117,14 +127,14 @@ export default function EditProfile({ npub }: Props) {
             className="hidden"
             readOnly
             autoComplete="current-password"
-            value={window.localStorage.getItem("nostr_nsec") || ""}
+            value={getItem("nostr_nsec") || ""}
           />
 
           {editable && (
             <div className="space-y-4">
               <CopyableValue
                 label="Private Key (nsec)"
-                value={window.localStorage.getItem("nostr_nsec") || ""}
+                value={getItem("nostr_nsec") || ""}
                 secret
               />
               <p className="text-sm text-muted-foreground">
@@ -135,7 +145,7 @@ export default function EditProfile({ npub }: Props) {
             </div>
           )}
 
-          {profile.npub && (
+          {profile?.npub && (
             <CopyableValue label="Public address (npub)" value={profile.npub} />
           )}
         </CardContent>

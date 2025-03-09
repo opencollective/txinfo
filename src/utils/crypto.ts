@@ -31,6 +31,9 @@ export const getBlockTimestamp = async (
   }
 
   const block = await provider.getBlock(blockNumber);
+  if (!block) {
+    throw new Error(`Block not found: ${blockNumber}`);
+  }
   localStorage.setItem(key, block.timestamp.toString());
   return block.timestamp;
 };
@@ -236,6 +239,7 @@ export async function processBlockRange(
 ) {
   const key = `${chain}:${address}[${fromBlock}:${toBlock}]`.toLowerCase();
   const cached = localStorage.getItem(key);
+  // @ts-expect-error useCache is not defined in the window object
   if (cached && (!window.useCache || window.useCache !== false)) {
     const res = JSON.parse(cached);
     res.cached = true;
@@ -246,13 +250,13 @@ export async function processBlockRange(
   const txs = await getBlockRange(chain, address, fromBlock, toBlock, provider);
   if (txs.length > 0) {
     const newTxs: Transaction[] = await Promise.all(
-      txs.map(async (tx) => {
+      txs.map(async (tx: Transaction) => {
         const timestamp = await getBlockTimestamp(
           chain,
           tx.blockNumber,
           provider
         );
-        const token = await getTokenDetails(chain, tx.contract, provider);
+        const token = await getTokenDetails(chain, tx.token.address, provider);
         return {
           ...tx,
           timestamp,
@@ -274,22 +278,24 @@ export async function processBlockRange(
  * @param provider - The provider to use
  * @returns array of transactions
  */
-export const getBlockRange = async (
+export async function getBlockRange(
   chain: string,
   accountAddress: string,
   fromBlock: number,
   toBlock: number,
   provider: ethers.JsonRpcProvider
-) => {
+): Promise<Transaction[]> {
   const key =
     `${chain}:${accountAddress}[${fromBlock}-${toBlock}]`.toLowerCase();
   const cached = localStorage.getItem(key);
+  // @ts-expect-error useCache is not defined in the window object
   if (cached && (!window.useCache || window.useCache !== false)) {
     const res = JSON.parse(cached);
     res.cached = true;
     return res;
   }
-  console.log(">>> skipping cache", key, cached, window.useCache);
+  // @ts-expect-error useCache is not defined in the window object
+  // console.log(">>> skipping cache", key, cached, window.useCache);
   localStorage.removeItem(key); // remove previous cache
   console.log(
     "utils/crypto.ts: getBlockRange",
@@ -335,7 +341,9 @@ export const getBlockRange = async (
         txIndex: log.transactionIndex,
         logIndex: log.index,
         txHash: log.transactionHash,
-        contract: log.address,
+        token: {
+          address: log.address,
+        },
         from,
         to,
         value,
@@ -343,10 +351,12 @@ export const getBlockRange = async (
     } catch (error) {
       hasError = true;
       console.log("error parsing log", log, error);
+      // e.g. https://gnosisscan.io/tx/0xf8162e7b3e5ed2691d1b7ba587108743230d7b98514d2f5c3a19899274b3cb8f (NFT spam)
       return null;
     }
   });
   res.sort((a, b) => {
+    if (!a || !b) return 0;
     // First sort by block number
     if (a.blockNumber !== b.blockNumber) {
       return b.blockNumber - a.blockNumber;
@@ -359,8 +369,8 @@ export const getBlockRange = async (
     return b.logIndex - a.logIndex;
   });
   if (!hasError) localStorage.setItem(key, JSON.stringify(res));
-  return res;
-};
+  return res.filter((tx) => tx !== null) as Transaction[];
+}
 
 export async function isEOA(
   chain: string,

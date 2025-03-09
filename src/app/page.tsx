@@ -1,94 +1,100 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+const FEATURED_ACCOUNTS = [
+  {
+    name: "Citizen Spring Safe Multisig",
+    address: "0x6fDF0AaE33E313d9C98D2Aa19Bcd8EF777912CBf",
+    chain: "gnosis",
+  },
+  {
+    name: "Citizen Wallet EOA",
+    address: "0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
+    chain: "gnosis",
+  },
+  {
+    name: "Regens Unite Multisig",
+    address: "0x371cA2c8f1D02864C7306e5E5Ed5DC6edF2DD19c",
+    chain: "gnosis",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50 to-white">
-      <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24">
-        <div className="text-center">
-          <h1 className="text-4xl sm:text-6xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-transparent bg-clip-text mb-6">
-            TxInfo.xyz
-          </h1>
+    <main className="flex min-h-screen flex-col">
+      {/* Hero Section */}
+      <section className="py-20 px-8 text-center ">
+        <h1 className="text-4xl font-bold mb-4">TxInfo.xyz</h1>
+        <p className="text-xl text-muted-foreground mb-8">
+          Add metadata to any blockchain transaction using Nostr
+        </p>
+        <div className="max-w-2xl mx-auto">
+          {/* ... existing search component ... */}
+        </div>
+      </section>
 
-          <p className="text-xl sm:text-2xl text-gray-600 mb-12">
-            Add metadata to any blockchain transaction using Nostr
+      {/* Featured Accounts */}
+      <section className="py-16 px-8">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-semibold mb-6">Featured Accounts</h2>
+          <div className="grid gap-4">
+            {FEATURED_ACCOUNTS.map(({ name, address, chain }) => (
+              <Link
+                key={address}
+                href={`/${chain}/address/${address}`}
+                className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{name}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {address.slice(0, 6)}...{address.slice(-4)}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 px-8 bg-muted/50">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-semibold mb-2">
+            The Missing Metadata Layer
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            A decentralized way to add human context to blockchain transactions
           </p>
 
-          <div className="grid gap-8 md:grid-cols-2 mb-16">
-            <div className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <h2 className="text-xl font-semibold mb-3 text-violet-700">
-                🔍 Find Information
-              </h2>
-              <p className="text-gray-600">
-                Search and discover metadata about any transaction across
-                multiple blockchains
+          <div className="grid gap-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-2">🤝 Collaborative</h3>
+              <p className="text-muted-foreground">
+                Anyone can contribute metadata to any transaction or address
               </p>
-            </div>
+            </Card>
 
-            <div className="p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <h2 className="text-xl font-semibold mb-3 text-violet-700">
-                ✍️ Add Context
-              </h2>
-              <p className="text-gray-600">
-                Contribute by adding descriptions, tags, and links to
-                transactions
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-2">🌐 Decentralized</h3>
+              <p className="text-muted-foreground">
+                No single server, data is distributed across Nostr relays
               </p>
-            </div>
-          </div>
+            </Card>
 
-          <div className="space-y-4">
-            <Link
-              href="/profile"
-              className="inline-block px-8 py-3 bg-violet-600 text-white font-semibold rounded-lg hover:bg-violet-700 transition-colors"
-            >
-              Get Started
-            </Link>
-
-            <p className="text-sm text-gray-500">
-              Powered by{" "}
-              <a
-                href="https://nostr.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-violet-600 hover:text-violet-700 underline"
-              >
-                Nostr
-              </a>
-            </p>
+            <Card className="p-6">
+              <h3 className="text-lg font-medium mb-2">🔌 Easy to integrate</h3>
+              <p className="text-muted-foreground">
+                Simple API to post or listen to metadata updates via Nostr
+              </p>
+            </Card>
           </div>
         </div>
-
-        <div className="mt-24">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-            How It Works
-          </h2>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="text-center p-4">
-              <div className="text-3xl mb-2">🔗</div>
-              <h3 className="font-medium mb-2">Connect</h3>
-              <p className="text-gray-600 text-sm">
-                Sign in with your Nostr key or extension
-              </p>
-            </div>
-
-            <div className="text-center p-4">
-              <div className="text-3xl mb-2">📝</div>
-              <h3 className="font-medium mb-2">Add Info</h3>
-              <p className="text-gray-600 text-sm">
-                Write descriptions and add metadata to any transaction
-              </p>
-            </div>
-
-            <div className="text-center p-4">
-              <div className="text-3xl mb-2">🌐</div>
-              <h3 className="font-medium mb-2">Share</h3>
-              <p className="text-gray-600 text-sm">
-                Help others understand blockchain transactions better
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

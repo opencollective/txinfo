@@ -46,7 +46,7 @@ export default function AddressDetails({
               <div className="space-y-2">
                 <EditNoteForm
                   uri={uri}
-                  defaultValue={latestNote.content + " " + tags.join(" ")}
+                  defaultValue={latestNote?.content + " " + tags.join(" ")}
                   inputRef={inputRef}
                   onCancel={onCancelEditing}
                 />

@@ -67,6 +67,16 @@ export type RelaySubscription = {
   close: () => void;
 };
 
+const getItem = (key: string) => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(key);
+};
+
+const setItem = (key: string, data: string) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, data);
+};
+
 export function NostrProvider({ children }: { children: React.ReactNode }) {
   const [pool, setPool] = useState<SimplePool | null>(null);
   const [connectedRelays, setConnectedRelays] = useState<string[]>([]);
@@ -82,23 +92,23 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const _pool = new SimplePool();
 
-    let nsec = localStorage.getItem("nostr_nsec");
-    let pubkey = localStorage.getItem("nostr_pubkey");
+    let nsec = getItem("nostr_nsec");
+    let pubkey = getItem("nostr_pubkey");
 
     if (!nsec) {
       const secretKey = generateSecretKey();
       nsec = nsecEncode(secretKey);
-      localStorage.setItem("nostr_nsec", nsec);
+      setItem("nostr_nsec", nsec);
       pubkey = getPublicKey(secretKey);
-      localStorage.setItem("nostr_pubkey", pubkey);
+      setItem("nostr_pubkey", pubkey);
     }
     if (!pubkey) {
       const { data: secretKey } = decode(nsec);
       pubkey = getPublicKey(secretKey as Uint8Array);
-      localStorage.setItem("nostr_pubkey", pubkey);
+      setItem("nostr_pubkey", pubkey);
     }
     const npub = npubEncode(pubkey);
-    localStorage.setItem("nostr_npub", npub);
+    setItem("nostr_npub", npub);
     if (!npub) {
       throw new Error("useNostr: No npub");
     }
@@ -227,7 +237,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     { content, tags }: { content: string; tags: string[][] }
   ) => {
     if (!pool) throw new Error("Not connected");
-    const nsec = localStorage.getItem("nostr_nsec");
+    const nsec = getItem("nostr_nsec");
     if (!nsec) throw new Error("Not logged in");
 
     const { data: secretKey } = decode(nsec);
@@ -256,7 +266,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     website: string;
   }) => {
     if (!pool) throw new Error("Not connected");
-    const nsec = localStorage.getItem("nostr_nsec");
+    const nsec = getItem("nostr_nsec");
     if (!nsec) throw new Error("Not logged in");
 
     const { data: secretKey } = decode(nsec);
@@ -301,8 +311,14 @@ export const useProfile = (pubkey?: string) => {
   if (!context) {
     throw new Error("useProfile must be used within NostrProvider");
   }
-  const nostr_pubkey = pubkey || localStorage.getItem("nostr_pubkey");
-  if (!nostr_pubkey) throw new Error("Not logged in");
+  const nostr_pubkey = pubkey || getItem("nostr_pubkey");
+  if (!nostr_pubkey) {
+    console.log(">>> useProfile: Not logged in");
+    return {
+      profile: null,
+      updateProfile: context.updateProfile,
+    };
+  }
 
   context.subscribeToProfiles([nostr_pubkey]);
 

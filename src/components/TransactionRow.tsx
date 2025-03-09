@@ -382,7 +382,7 @@ export function TransactionRow({
           <div className="text-lg font-semibold">
             {Number(ethers.formatUnits(tx.value, tx.token.decimals)).toFixed(2)}{" "}
             <span className="text-sm font-normal text-muted-foreground">
-              {tx.token.symbol}
+              {tx.token.symbol?.substring(0, 6)}
             </span>
           </div>
         </div>

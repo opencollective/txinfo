@@ -6,19 +6,21 @@ export type AddressType = "address" | "tx";
 export type URI = `${ChainId}:${AddressType}:${Address | TxHash}`;
 
 export type Token = {
-  name: string;
-  symbol: string;
+  name?: string;
+  symbol?: string;
   address: Address;
-  decimals: number;
+  decimals?: number;
 };
 export interface Transaction {
+  blockNumber: number;
   txHash: TxHash;
+  txIndex?: number;
+  logIndex?: number;
   timestamp: number;
   from: Address;
   to: Address;
   value: string;
   token: Token;
-  blockNumber: number;
 }
 
 export type ChainConfig = {

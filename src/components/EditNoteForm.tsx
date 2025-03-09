@@ -55,7 +55,9 @@ export default function NoteForm({
         return ["t", tag];
       });
 
-      const previousNote = notesByURI[uri][notesByURI[uri].length - 1];
+      const previousNote = notesByURI[uri]
+        ? notesByURI[uri][notesByURI[uri].length - 1]
+        : { tags: [] };
       // Here you would publish the profile data to nostr
       // This is a placeholder for the actual implementation
       await publishNote(uri, {

@@ -41,7 +41,7 @@ export default function Transactions({ address, chain }: Props) {
     selectedTokens: [],
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const chainConfig = chains[chain as keyof typeof chains];
@@ -64,7 +64,12 @@ export default function Transactions({ address, chain }: Props) {
     try {
       const tokenMap: Record<Address, Token> = {};
       transactions.forEach((tx) => {
-        if (tx.token?.address) {
+        if (
+          tx.token?.address &&
+          tx.token?.symbol &&
+          tx.token?.symbol?.length > 0 &&
+          tx.token?.symbol?.length <= 6
+        ) {
           tokenMap[tx.token.address] = tx.token;
         }
       });
@@ -110,8 +115,10 @@ export default function Transactions({ address, chain }: Props) {
     return filtered;
   }, [transactions, transactionsFilter]);
 
+  const totalIterations = useRef(0);
+
   useEffect(() => {
-    // const cachedTransactions = localStorage.getItem(
+    // const cachedTransactions = getItem(
     //   `${chain}:${address}:transactions`
     // );
     // if (cachedTransactions) {
@@ -126,7 +133,7 @@ export default function Transactions({ address, chain }: Props) {
     // }
 
     const fetchAllTransactions = async () => {
-      setIsLoading(true);
+      setIsScanning(true);
       try {
         const blockRange = await getBlockRangeForAddress(chain, address);
 
@@ -137,14 +144,26 @@ export default function Transactions({ address, chain }: Props) {
         const firstBlock = blockRange?.firstBlock || 1;
         console.log(">>> total block range", firstBlock, lastBlock);
         console.log(">>> current block range", fromBlock, toBlock);
+        const iterationsRequired = Math.ceil((lastBlock - firstBlock) / limit);
+        console.log(">>> iterations required", iterationsRequired);
         setProgress({
           fromBlock,
           toBlock,
           lastBlock,
           firstBlock,
         });
-
-        while (toBlock > 0 && fromBlock >= firstBlock - limit) {
+        while (
+          toBlock > 0 &&
+          fromBlock >= firstBlock - limit &&
+          totalIterations.current <= iterationsRequired
+        ) {
+          totalIterations.current++;
+          // console.log(
+          //   ">>> totalIterations.current",
+          //   totalIterations.current,
+          //   fromBlock,
+          //   toBlock
+          // );
           try {
             const newTxs = await processBlockRange(
               chain,
@@ -168,9 +187,9 @@ export default function Transactions({ address, chain }: Props) {
                   const isDuplicate = prevTxs.some(
                     (t) => t.txHash === tx.txHash
                   );
-                  if (isDuplicate) {
-                    console.log("!!! duplicate", tx);
-                  }
+                  // if (isDuplicate) {
+                  //   console.log("!!! duplicate", tx);
+                  // }
                   return !isDuplicate;
                 });
 
@@ -198,7 +217,7 @@ export default function Transactions({ address, chain }: Props) {
         }
 
         // Store in localStorage
-        localStorage.setItem(
+        setItem(
           `${chain}:${address}:transactions`,
           JSON.stringify(transactions)
         );
@@ -206,7 +225,7 @@ export default function Transactions({ address, chain }: Props) {
         console.error("Error fetching transactions:", error);
         setError("Unable to load transactions. Please try again later.");
       } finally {
-        setIsLoading(false);
+        setIsScanning(false);
       }
     };
 
@@ -247,6 +266,16 @@ export default function Transactions({ address, chain }: Props) {
     return Math.min(Math.round((scannedBlocks / totalBlocks) * 100), 100);
   }, [progress]);
 
+  // const getItem = (key: string) => {
+  //   if (typeof window === "undefined") return [];
+  //   return JSON.parse(localStorage.getItem(key) || "[]");
+  // };
+
+  const setItem = (key: string, data: string) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(key, data);
+  };
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -260,9 +289,9 @@ export default function Transactions({ address, chain }: Props) {
         accountAddress={address as Address}
         transactions={filteredTransactions}
         tokens={
-          availableTokens.length === 1
-            ? availableTokens
-            : transactionsFilter.selectedTokens
+          transactionsFilter.selectedTokens.length > 0
+            ? transactionsFilter.selectedTokens
+            : availableTokens
         }
         timeRangeLabel={transactionsFilter.dateRange.label}
       />
@@ -284,7 +313,7 @@ export default function Transactions({ address, chain }: Props) {
       })}
 
       {/* Progress Bar */}
-      {isLoading && (
+      {isScanning && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
           <div className="container max-w-7xl mx-auto space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">

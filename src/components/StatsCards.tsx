@@ -14,6 +14,15 @@ import type { Transaction } from "@/types/index.d.ts";
 import { useMemo } from "react";
 import type { Token } from "@/types/index.d.ts";
 
+const formatNumber = (number: number, precision = 2) => {
+  const locale =
+    typeof window !== "undefined" ? window.navigator.language : "en-US";
+  return number.toLocaleString(locale, {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  });
+};
+
 export default function StatsCards({
   transactions,
   accountAddress,
@@ -59,7 +68,7 @@ export default function StatsCards({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {Intl.NumberFormat().format(stats.count)}
+            {formatNumber(stats.count, 0)}
           </div>
           <p className="text-xs text-muted-foreground">
             in {timeRangeLabel.toLowerCase()}
@@ -76,9 +85,9 @@ export default function StatsCards({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Intl.NumberFormat().format(stats.received)}
+                {formatNumber(stats.received)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
-                  {tokens[0].symbol}
+                  {tokens[0].symbol?.substring(0, 6)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -94,9 +103,9 @@ export default function StatsCards({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Intl.NumberFormat().format(stats.spent)}
+                {formatNumber(stats.spent)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
-                  {tokens[0].symbol}
+                  {tokens[0].symbol?.substring(0, 6)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -131,9 +140,9 @@ export default function StatsCards({
                 )}
               >
                 {stats.net > 0 ? "+" : ""}
-                {Intl.NumberFormat().format(stats.net)}
+                {formatNumber(stats.net)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
-                  {tokens[0].symbol}
+                  {tokens[0].symbol?.substring(0, 6)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -146,11 +155,17 @@ export default function StatsCards({
         // Group transactions by token and show stats for each
         Object.entries(
           transactions.reduce((acc, tx) => {
-            const tokenKey = `${tx.token.symbol} (${truncateAddress(
-              tx.token.address
-            )})`;
+            const tokenKey = tx.token.address;
+            if (!tokens.find((t) => t.address === tokenKey)) {
+              return acc;
+            }
             if (!acc[tokenKey]) {
-              acc[tokenKey] = { received: 0, spent: 0, net: 0 };
+              acc[tokenKey] = {
+                received: 0,
+                spent: 0,
+                net: 0,
+                token: tx.token,
+              };
             }
             const amount = Number(
               ethers.formatUnits(tx.value, tx.token.decimals)
@@ -163,11 +178,22 @@ export default function StatsCards({
               acc[tokenKey].net -= amount;
             }
             return acc;
-          }, {} as Record<string, { received: number; spent: number; net: number }>)
+          }, {} as Record<string, { received: number; spent: number; net: number; token: Token }>)
         ).map(([token, stats]) => (
           <Card key={token} className="col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
-              <CardTitle className="text-sm font-medium">{token}</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {stats.token.symbol?.length > 6 ? (
+                  <span title={stats.token.symbol}>
+                    {stats.token.symbol?.substring(0, 6)}...
+                  </span>
+                ) : (
+                  stats.token.symbol
+                )}
+                <div title={stats.token.address}>
+                  {truncateAddress(stats.token.address)}
+                </div>
+              </CardTitle>
               <Coins className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
@@ -183,15 +209,15 @@ export default function StatsCards({
                   )}
                 >
                   {stats.net > 0 ? "+" : ""}
-                  {Intl.NumberFormat().format(stats.net).replace("-0", "0")}
+                  {formatNumber(stats.net).replace("-0", "0")}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-center border-t pt-3">
                 <p className="text-sm font-medium text-green-500">
-                  +{Intl.NumberFormat().format(stats.received)}
+                  +{formatNumber(stats.received, 0)}
                 </p>
                 <p className="text-sm font-medium text-red-500">
-                  -{Intl.NumberFormat().format(stats.spent)}
+                  -{formatNumber(stats.spent, 0)}
                 </p>
               </div>
             </CardContent>

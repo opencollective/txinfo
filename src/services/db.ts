@@ -62,11 +62,11 @@ export class AppDatabase extends Dexie {
       }));
 
     if (newTxs.length > 0) {
-      await this.transactions.bulkAdd(newTxs);
+      await this.transactions.bulkAdd(newTxs as TransactionRecord[]);
     }
   }
 
-  async getTransactionsByURI(
+  async getTransactionsByAddress(
     chain: string,
     address: string
   ): Promise<Transaction[]> {
@@ -146,54 +146,6 @@ export class AppDatabase extends Dexie {
         uri,
         event: JSON.stringify(event),
       });
-    }
-  }
-
-  async bulkAddNostrEvents(events: NostrEvent[]): Promise<void> {
-    // Get existing event IDs
-    const existingIds = await this.nostrEvents
-      .where("eventId")
-      .anyOf(events.map((e) => e.id))
-      .toArray()
-      .then((events) => new Set(events.map((e) => e.eventId)));
-
-    // Filter and prepare events
-    const newEvents = events
-      .filter((e) => !existingIds.has(e.id))
-      .map((event) => {
-        // Extract metadata from event tags
-        let chainId: number | undefined;
-        let address: string | undefined;
-        let txHash: string | undefined;
-
-        const metadataTag = event.tags.find((tag) => tag[0] === "I");
-        if (metadataTag && metadataTag[1]) {
-          const parts = metadataTag[1].split(":");
-          if (parts.length === 3) {
-            chainId = parseInt(parts[0]);
-            const type = parts[1];
-            const value = parts[2];
-
-            if (type === "address") {
-              address = value;
-            } else if (type === "tx") {
-              txHash = value;
-            }
-          }
-        }
-
-        return {
-          eventId: event.id,
-          created_at: event.created_at,
-          chainId,
-          address,
-          txHash,
-          event: JSON.stringify(event),
-        };
-      });
-
-    if (newEvents.length > 0) {
-      await this.nostrEvents.bulkAdd(newEvents);
     }
   }
 
