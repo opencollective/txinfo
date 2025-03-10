@@ -25,9 +25,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="[@media(prefers-color-scheme:dark)]:dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <main className="flex flex-col gap-4 max-w-screen-lg mx-auto p-16">
           <NostrProvider>{children}</NostrProvider>
