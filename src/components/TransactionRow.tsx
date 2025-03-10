@@ -100,14 +100,14 @@ export function TransactionRow({
 
     try {
       const uri = `${chainId}:address:${currentAddress}`.toLowerCase() as URI;
-      const previousNote = notesByURI[uri][0];
+      const previousNote = notesByURI[uri] ? notesByURI[uri][0] : null;
       // Here you would publish the profile data to nostr
       // This is a placeholder for the actual implementation
       await publishNote(uri, {
         content: profileData.name,
         tags: [
           // Make sure we don't duplicate tags
-          ...previousNote?.tags.filter(
+          ...(previousNote?.tags || []).filter(
             (t) => ["I", "picture", "website", "about"].indexOf(t[0]) === -1
           ),
           ["picture", profileData.picture],
