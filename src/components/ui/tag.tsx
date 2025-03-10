@@ -17,61 +17,20 @@ function stringToColor(str: string): string {
 }
 
 export function Tag({ className, value, ...props }: TagProps) {
-  // Check if the tag has a key:value format
-  const hasKeyValue = value.includes(":");
+  const [kind, val] = value.split(":");
 
-  if (hasKeyValue) {
-    const [key, val] = value.split(":");
-
-    // Generate colors based on the key and value
-    const keyColor = stringToColor(key);
-
-    // Determine if the value is numeric
-    const isNumeric = /^\d+(\.\d+)?$/.test(val);
-
-    // Choose color for value based on content
-    let valueColor: string;
-
-    if (isNumeric) {
-      const num = parseFloat(val);
-      if (num > 0) valueColor = "hsl(120, 70%, 85%)"; // Green for positive
-      else if (num < 0) valueColor = "hsl(0, 70%, 85%)"; // Red for negative
-      else valueColor = "hsl(200, 70%, 85%)"; // Blue for zero
-    } else {
-      valueColor = stringToColor(val);
-    }
-
-    return (
-      <span
-        className={cn(
-          "inline-flex items-center rounded-md text-xs font-medium",
-          className
-        )}
-        {...props}
-      >
-        <span
-          className="px-2 py-1 rounded-l-md ring-1 ring-inset ring-muted-foreground/20"
-          style={{
-            backgroundColor: keyColor,
-            color: "black",
-          }}
-        >
-          {key}
-        </span>
-        <span
-          className="px-2 py-1 rounded-r-md ring-1 ring-inset ring-muted-foreground/20"
-          style={{
-            backgroundColor: valueColor,
-            color: "black",
-          }}
-        >
-          {val}
-        </span>
-      </span>
-    );
+  if (!val) {
+    return <SimpleTag value={value} className={className} {...props} />;
   }
 
-  // For regular tags without key:value format
+  if (kind === "t") {
+    return <SimpleTag value={val} className={className} {...props} />;
+  }
+
+  return <ComboTag kind={kind} value={val} className={className} {...props} />;
+}
+
+function SimpleTag({ value, className, ...props }: TagProps) {
   return (
     <span
       className={cn(
@@ -85,6 +44,59 @@ export function Tag({ className, value, ...props }: TagProps) {
       {...props}
     >
       {value}
+    </span>
+  );
+}
+
+function ComboTag({
+  kind,
+  value,
+  className,
+  ...props
+}: TagProps & { kind: string }) {
+  // Generate colors based on the kind and value
+  const kindColor = stringToColor(kind);
+
+  // Determine if the value is numeric
+  const isNumeric = /^\d+(\.\d+)?$/.test(value);
+
+  // Choose color for value based on content
+  let valueColor: string;
+
+  if (isNumeric) {
+    const num = parseFloat(value);
+    if (num > 0) valueColor = "hsl(120, 70%, 85%)"; // Green for positive
+    else if (num < 0) valueColor = "hsl(0, 70%, 85%)"; // Red for negative
+    else valueColor = "hsl(200, 70%, 85%)"; // Blue for zero
+  } else {
+    valueColor = stringToColor(value);
+  }
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md text-xs font-medium",
+        className
+      )}
+      {...props}
+    >
+      <span
+        className="px-2 py-1 rounded-l-md ring-1 ring-inset ring-muted-foreground/20"
+        style={{
+          backgroundColor: kindColor,
+          color: "black",
+        }}
+      >
+        {kind}
+      </span>
+      <span
+        className="px-2 py-1 rounded-r-md ring-1 ring-inset ring-muted-foreground/20"
+        style={{
+          backgroundColor: valueColor,
+          color: "black",
+        }}
+      >
+        {value}
+      </span>
     </span>
   );
 }

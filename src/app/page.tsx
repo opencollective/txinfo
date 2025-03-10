@@ -1,22 +1,25 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { truncateAddress } from "@/utils/crypto.server";
+import { Address } from "@/types";
 
 const FEATURED_ACCOUNTS = [
   {
     name: "Citizen Spring Safe Multisig",
-    address: "0x6fDF0AaE33E313d9C98D2Aa19Bcd8EF777912CBf",
-    chain: "gnosis",
+    uri: "gnosis/address/0x6fDF0AaE33E313d9C98D2Aa19Bcd8EF777912CBf",
+  },
+  {
+    name: "Commons Hub Token",
+    uri: "celo/token/0x65dd32834927de9e57e72a3e2130a19f81c6371d",
   },
   {
     name: "Citizen Wallet EOA",
-    address: "0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
-    chain: "gnosis",
+    uri: "gnosis/address/0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
   },
   {
     name: "Regens Unite Multisig",
-    address: "0x371cA2c8f1D02864C7306e5E5Ed5DC6edF2DD19c",
-    chain: "gnosis",
+    uri: "gnosis/address/0x371cA2c8f1D02864C7306e5E5Ed5DC6edF2DD19c",
   },
 ];
 
@@ -39,17 +42,17 @@ export default function Home() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold mb-6">Featured Accounts</h2>
           <div className="grid gap-4">
-            {FEATURED_ACCOUNTS.map(({ name, address, chain }) => (
+            {FEATURED_ACCOUNTS.map(({ name, uri }) => (
               <Link
-                key={address}
-                href={`/${chain}/address/${address}`}
+                key={uri}
+                href={`/${uri}`}
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col">
                     <span className="font-medium">{name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {address.slice(0, 6)}...{address.slice(-4)}
+                      {truncateAddress(uri.split("/")[2] as Address)}
                     </span>
                   </div>
                 </div>

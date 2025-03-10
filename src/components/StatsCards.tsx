@@ -14,18 +14,36 @@ import type { Transaction } from "@/types/index.d.ts";
 import { useMemo } from "react";
 import type { Token } from "@/types/index.d.ts";
 
-const formatNumber = (number: number, precision = 2) => {
+const formatNumber = (number: number, precision: number) => {
+  let num,
+    prec,
+    suffix = "";
   const locale =
     typeof window !== "undefined" ? window.navigator.language : "en-US";
-  return number.toLocaleString(locale, {
-    minimumFractionDigits: precision,
-    maximumFractionDigits: precision,
-  });
+
+  if (number > 1000000) {
+    num = number / 1000000;
+    prec = 2;
+    suffix = "M";
+  } else if (number > 1000) {
+    num = number / 1000;
+    prec = 2;
+    suffix = "K";
+  } else {
+    num = number.toFixed(precision);
+    prec = precision || 2;
+  }
+  return (
+    num.toLocaleString(locale, {
+      minimumFractionDigits: prec,
+      maximumFractionDigits: prec,
+    }) + suffix
+  );
 };
 
 export default function StatsCards({
   transactions,
-  accountAddress,
+  accountAddress = "0x0000000000000000000000000000000000000000" as Address,
   timeRangeLabel,
   tokens,
 }: {
@@ -85,7 +103,7 @@ export default function StatsCards({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatNumber(stats.received)}
+                {formatNumber(stats.received, 2)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
                   {tokens[0].symbol?.substring(0, 6)}
                 </span>
@@ -103,7 +121,7 @@ export default function StatsCards({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatNumber(stats.spent)}
+                {formatNumber(stats.spent, 2)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
                   {tokens[0].symbol?.substring(0, 6)}
                 </span>
@@ -116,7 +134,11 @@ export default function StatsCards({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Change</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {timeRangeLabel.toLowerCase() === "all time"
+                  ? "Balance"
+                  : "Net Change"}
+              </CardTitle>
               <Sigma
                 className={cn(
                   "h-4 w-4",
@@ -140,7 +162,7 @@ export default function StatsCards({
                 )}
               >
                 {stats.net > 0 ? "+" : ""}
-                {formatNumber(stats.net)}
+                {formatNumber(stats.net, 2)}
                 <span className="text-sm font-normal text-muted-foreground ml-1">
                   {tokens[0].symbol?.substring(0, 6)}
                 </span>
@@ -209,7 +231,7 @@ export default function StatsCards({
                   )}
                 >
                   {stats.net > 0 ? "+" : ""}
-                  {formatNumber(stats.net).replace("-0", "0")}
+                  {formatNumber(stats.net, 2).replace("-0", "0")}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-center border-t pt-3">

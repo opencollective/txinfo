@@ -4,7 +4,9 @@ import { ethers } from "ethers";
 import ERC20_ABI from "../erc20.abi.json";
 import chains from "../chains.json";
 import { useState, useEffect, useRef } from "react";
-import type { Transaction, Token } from "@/types/index.d.ts";
+import type { Transaction, Token, EtherscanTransfer } from "@/types/index.d.ts";
+import * as crypto from "./crypto.server";
+export const truncateAddress = crypto.truncateAddress;
 
 // const cache = {};
 // const localStorage =
@@ -37,10 +39,6 @@ export const getBlockTimestamp = async (
   localStorage.setItem(key, block.timestamp.toString());
   return block.timestamp;
 };
-
-export function truncateAddress(address: string) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
 
 export async function getTokenDetails(
   chain: string,
@@ -400,31 +398,76 @@ export async function getBlockRangeForAddress(
   chain: string,
   address: string
 ): Promise<null | { firstBlock: number; lastBlock: number | undefined }> {
+  // const key = `${chain}:${address}`;
+  // const cached = localStorage.getItem(key);
+  // if (cached) {
+  //   return JSON.parse(cached);
+  // }
+
+  const transactions = await getTransactionsFromEtherscan(chain, address);
+  if (transactions) {
+    const firstBlock = Number(transactions[0].blockNumber);
+    const lastBlock =
+      transactions.length < 10000
+        ? Number(transactions[transactions.length - 1].blockNumber)
+        : undefined;
+    console.log(">>> blockRangeForAddress", address, firstBlock, lastBlock);
+    // localStorage.setItem(key, blockNumber.toString());
+    return { firstBlock, lastBlock };
+  } else {
+    console.log(">>> no transactions found for", chain, address);
+    return null;
+  }
+}
+
+export async function getTransactionsFromEtherscan(
+  chain: string,
+  address?: string,
+  tokenAddress?: string
+): Promise<null | Transaction[]> {
   // const key = `${chain}:${address}:firstBlock`;
   // const cached = localStorage.getItem(key);
   // if (cached) {
   //   return JSON.parse(cached);
   // }
 
-  // const isAccountEOA = await isEOA(chain, address, provider);
-  // console.log(">>> isAccountEOA", address, isAccountEOA);
-  // let apicall;
-  // if (isAccountEOA) {
-  const apicall = `/api/etherscan/account?address=${address}&chain=${chain}`;
-  // } else {
-  //   apicall = `/api/etherscan/contract?address=${address}&chain=${chain}`;
-  // }
+  const params = new URLSearchParams({
+    chain,
+    module: "account",
+    action: "tokentx",
+    startblock: "0",
+    endblock: "99999999",
+    sort: "desc",
+  });
+
+  // Add optional filters
+  if (address) {
+    params.set("address", address);
+  }
+  if (tokenAddress) {
+    params.set("contractaddress", tokenAddress);
+  }
+
+  const apicall = `/api/etherscan?${params.toString()}`;
+
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {
-    const firstBlock = Number(data.result[0].blockNumber);
-    const lastBlock =
-      data.result.length < 10000
-        ? Number(data.result[data.result.length - 1].blockNumber)
-        : undefined;
-    console.log(">>> blockRangeForAddress", address, firstBlock, lastBlock);
-    // localStorage.setItem(key, blockNumber.toString());
-    return { firstBlock, lastBlock };
+    return data.result.map((tx: EtherscanTransfer) => ({
+      blockNumber: Number(tx.blockNumber),
+      txHash: tx.hash,
+      txIndex: Number(tx.transactionIndex),
+      timestamp: Number(tx.timeStamp),
+      from: tx.from,
+      to: tx.to,
+      value: tx.value,
+      token: {
+        address: tx.contractAddress,
+        name: tx.tokenName,
+        decimals: Number(tx.tokenDecimal),
+        symbol: tx.tokenSymbol,
+      },
+    }));
   } else {
     console.log(">>> error from /api/etherscan", data);
     return null;

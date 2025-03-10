@@ -1,38 +1,30 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
-import { JsonRpcProvider } from "ethers";
-import { processBlockRange, getBlockRangeForAddress } from "../utils/crypto";
+import { useMemo, useState, useEffect } from "react";
+import { getTransactionsFromEtherscan } from "../utils/crypto";
 import chains from "../chains.json";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { TransactionRow } from "@/components/TransactionRow";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Progress } from "@/components/ui/progress";
 import { X } from "lucide-react";
 import type { Address, Token } from "@/types";
-import { cn } from "@/lib/utils";
 import type { Transaction } from "@/types/index.d.ts";
 import { URI, useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
 
 interface Props {
-  address: string;
   chain: string;
+  address?: string;
+  tokenAddress?: string;
 }
 
 const LIMIT_PER_PAGE = 50;
 
-export default function Transactions({ address, chain }: Props) {
+export default function Transactions({ address, chain, tokenAddress }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{
-    fromBlock: number;
-    toBlock: number;
-    lastBlock: number;
-    firstBlock: number;
-  }>({ fromBlock: 0, toBlock: 0, lastBlock: 0, firstBlock: 0 });
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
     dateRange: {
       start: startOfMonth(new Date()),
@@ -42,19 +34,9 @@ export default function Transactions({ address, chain }: Props) {
     selectedTokens: [],
   });
 
-  const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const chainConfig = chains[chain as keyof typeof chains];
-  const rpc = useMemo(
-    () =>
-      typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
-    [chainConfig]
-  );
-  const provider = useRef<JsonRpcProvider>(new JsonRpcProvider(rpc[0]));
-  const allTransactions = useRef<Transaction[]>([]);
-  const limit = 10000;
-  let errorCount = 0;
 
   // Get unique token symbols from transactions
   const availableTokens = useMemo(() => {
@@ -117,8 +99,6 @@ export default function Transactions({ address, chain }: Props) {
     return filtered;
   }, [transactions, transactionsFilter]);
 
-  const totalIterations = useRef(0);
-
   useMemo(() => {
     // const cachedTransactions = getItem(
     //   `${chain}:${address}:transactions`
@@ -135,128 +115,22 @@ export default function Transactions({ address, chain }: Props) {
     // }
 
     const fetchAllTransactions = async () => {
-      setIsScanning(true);
       try {
-        const blockRange = await getBlockRangeForAddress(chain, address);
+        const transactions: Transaction[] | null =
+          await getTransactionsFromEtherscan(chain, address, tokenAddress);
 
-        const lastBlock =
-          blockRange?.lastBlock || (await provider.current.getBlockNumber());
-        let fromBlock = lastBlock - (lastBlock % limit);
-        let toBlock = lastBlock;
-        const firstBlock = blockRange?.firstBlock || 1;
-        console.log(">>> total block range", firstBlock, lastBlock);
-        console.log(">>> current block range", fromBlock, toBlock);
-        const iterationsRequired = Math.ceil((lastBlock - firstBlock) / limit);
-        console.log(">>> iterations required", iterationsRequired);
-        setProgress({
-          fromBlock,
-          toBlock,
-          lastBlock,
-          firstBlock,
-        });
-        while (
-          toBlock > 0 &&
-          fromBlock >= firstBlock - limit &&
-          totalIterations.current <= iterationsRequired
-        ) {
-          totalIterations.current++;
-          // console.log(
-          //   ">>> totalIterations.current",
-          //   totalIterations.current,
-          //   fromBlock,
-          //   toBlock
-          // );
-          try {
-            const newTxs: Transaction[] = await processBlockRange(
-              chain,
-              address,
-              fromBlock,
-              toBlock,
-              provider.current
-            );
-            // Update progress
-            setProgress({
-              fromBlock,
-              toBlock,
-              lastBlock,
-              firstBlock,
-            });
-
-            allTransactions.current.push(...newTxs);
-
-            if (newTxs && newTxs.length > 0) {
-              // This triggers a re-render of the component which we don't want
-              // Update state with all transactions so far
-              // setTransactions((prevTxs) => {
-              //   // const uniques = newTxs.filter((tx: Transaction) => {
-              //   //   const isDuplicate = prevTxs.some(
-              //   //     (t) => t.txHash === tx.txHash
-              //   //   );
-              //   //   // if (isDuplicate) {
-              //   //   //   console.log("!!! duplicate", tx);
-              //   //   // }
-              //   //   return !isDuplicate;
-              //   // });
-              //   // return [...prevTxs, ...uniques];
-              //   return [...prevTxs, ...newTxs];
-              // });
-            }
-            toBlock = fromBlock - 1;
-            fromBlock = fromBlock - limit;
-          } catch (error) {
-            errorCount++;
-            console.error("Error fetching transactions:", error);
-            if (errorCount >= rpc.length) {
-              throw new Error("All RPCs failed");
-            }
-            console.log(
-              "Transactions.tsx: fetchAllTransactions> errorCount",
-              errorCount,
-              "switching to rpc",
-              rpc[errorCount % rpc.length]
-            );
-            provider.current = new JsonRpcProvider(
-              rpc[errorCount % rpc.length]
-            );
-          }
+        console.log(">>> transactions", transactions);
+        if (transactions) {
+          setTransactions(transactions);
         }
-
-        setTransactions((prevTxs) => {
-          const uniques = allTransactions.current.filter((tx: Transaction) => {
-            const isDuplicate = prevTxs.some((t) => t.txHash === tx.txHash);
-            // if (isDuplicate) {
-            //   console.log("!!! duplicate", tx);
-            // }
-            return !isDuplicate;
-          });
-
-          allTransactions.current = uniques;
-          return uniques;
-        });
-        // Store in localStorage
-        setItem(
-          `${chain}:${address}:transactions`,
-          JSON.stringify(allTransactions.current)
-        );
       } catch (error) {
         console.error("Error fetching transactions:", error);
         setError("Unable to load transactions. Please try again later.");
-      } finally {
-        setIsScanning(false);
       }
     };
 
     fetchAllTransactions();
-  }, [
-    address,
-    chain,
-    transactions,
-    transactionsFilter,
-    provider,
-    limit,
-    errorCount,
-    rpc,
-  ]);
+  }, [address, chain, tokenAddress]);
 
   // Subscribe to notes for all transactions at once
   const { subscribeToNotesByURI } = useNostr();
@@ -272,26 +146,6 @@ export default function Transactions({ address, chain }: Props) {
 
     subscribeToNotesByURI(Array.from(uris) as URI[]);
   }, [filteredTransactions, chainConfig, subscribeToNotesByURI]);
-
-  // Calculate transaction statistics based on filtered transactions
-
-  // Calculate progress percentage
-  const progressPercentage = useMemo(() => {
-    if (!progress.firstBlock || !progress.lastBlock) return 0;
-    const totalBlocks = progress.lastBlock - progress.firstBlock;
-    const scannedBlocks = progress.lastBlock - progress.fromBlock;
-    return Math.min(Math.round((scannedBlocks / totalBlocks) * 100), 100);
-  }, [progress]);
-
-  // const getItem = (key: string) => {
-  //   if (typeof window === "undefined") return [];
-  //   return JSON.parse(localStorage.getItem(key) || "[]");
-  // };
-
-  const setItem = (key: string, data: string) => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(key, data);
-  };
 
   return (
     <div className="space-y-6">
@@ -329,26 +183,6 @@ export default function Transactions({ address, chain }: Props) {
         );
       })}
 
-      {/* Progress Bar */}
-      <div
-        className={cn(
-          "fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t",
-          "transition-opacity duration-200",
-          isScanning ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-      >
-        <div className="container max-w-7xl mx-auto space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>
-              Scanning blocks{" "}
-              {(progress.lastBlock - progress.toBlock).toLocaleString()} /{" "}
-              {(progress.lastBlock - progress.firstBlock).toLocaleString()}
-            </span>
-            <span>{progressPercentage}%</span>
-          </div>
-          <Progress value={progressPercentage} className="w-full" />
-        </div>
-      </div>
       {error && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">
           <div className="container max-w-7xl mx-auto space-y-2">

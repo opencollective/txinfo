@@ -8,7 +8,7 @@ import CopyableValue from "./CopyableValue";
 import { Tag } from "@/components/ui/tag";
 import { useNostr, type URI, type Address } from "@/providers/NostrProvider";
 
-import EditNoteForm from "@/components/EditNoteForm";
+import EditMetadataForm from "@/components/EditMetadataForm";
 
 export default function AddressDetails({
   chain,
@@ -44,9 +44,10 @@ export default function AddressDetails({
           <div className="flex flex-col">
             {isEditing ? (
               <div className="space-y-2">
-                <EditNoteForm
+                <EditMetadataForm
                   uri={uri}
-                  defaultValue={latestNote?.content + " " + tags.join(" ")}
+                  content={latestNote?.content}
+                  tags={latestNote?.tags}
                   inputRef={inputRef}
                   onCancel={onCancelEditing}
                 />

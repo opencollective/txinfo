@@ -1,6 +1,6 @@
 "use client";
 
-import EditNoteForm from "@/components/EditNoteForm";
+import EditMetadataForm from "@/components/EditMetadataForm";
 import NotesList from "@/components/NotesList";
 import { URI, useNostr } from "@/providers/NostrProvider";
 export interface Metadata {
@@ -35,7 +35,7 @@ export default function Metadata({ uri }: { uri: URI }) {
             <p>{tags.join(", ")}</p>
           </div>
         </div>
-        <EditNoteForm uri={uri} defaultValue={description + tags.join(" ")} />
+        <EditMetadataForm uri={uri} content={description} tags={tags} />
         <h2>History</h2>
         <NotesList profiles={profiles} notes={notesByURI[uri]} />
       </div>

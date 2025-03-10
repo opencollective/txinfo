@@ -20,7 +20,7 @@ interface TransactionRecord extends Transaction {
 
 interface NostrEventRecord {
   id?: number;
-  uri: URI;
+  parent_uri: URI; // URI of the parent transaction / address
   event_id: string; // Primary identifier (event.id)
   created_at: number; // Timestamp for sorting
   event: string; // Full event as JSON string
@@ -138,12 +138,12 @@ export class AppDatabase extends Dexie {
       .where("event_id")
       .equals(event.id)
       .first();
-
+    // console.log(">>> addNostrEvent: existing", existing, uri, event);
     if (!existing) {
       await this.nostrEvents.add({
         event_id: event.id,
         created_at: event.created_at,
-        uri,
+        parent_uri: uri,
         event: JSON.stringify(event),
       });
     }

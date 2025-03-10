@@ -23,6 +23,31 @@ export interface Transaction {
   token: Token;
 }
 
+/**
+ * Etherscan API response for token transfers
+ */
+export type EtherscanTransfer = {
+  blockNumber: number;
+  timeStamp: number;
+  hash: TxHash;
+  nonce: number;
+  blockHash: TxHash;
+  from: Address;
+  contractAddress: Address;
+  to: Address;
+  value: string;
+  tokenName: string;
+  tokenSymbol: string;
+  tokenDecimal: string;
+  transactionIndex: number;
+  gas: string;
+  gasPrice: string;
+  gasUsed: string;
+  cumulativeGasUsed: string;
+  input: string;
+  confirmations: string;
+};
+
 export type ChainConfig = {
   id: number;
   rpc: string | string[];

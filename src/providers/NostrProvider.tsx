@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   SimplePool,
   type EventTemplate,
@@ -12,6 +20,7 @@ import {
 import relays from "@/relays.json";
 import { decode, nsecEncode, npubEncode } from "nostr-tools/nip19";
 import { db } from "@/services/db";
+import { insertEventIntoDescendingList } from "nostr-tools/utils";
 
 type HexString<Length extends number> = `0x${string}` & { length: Length };
 export type Address = HexString<42>;
@@ -144,163 +153,203 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     return event.tags.find((t) => t[0] === "I")?.[1] as URI | undefined;
   };
 
-  const addNostrEventsToState = (events: NostrEvent[]) => {
+  const addNostrEventsToState = useCallback((events: NostrEvent[]) => {
     if (events.length === 0) return;
+
     setNotesByURI((prev) => {
+      let hasNewEvents = false;
+      const next = { ...prev };
+
       events.forEach((event) => {
         const uri = getURIFromNostrEvent(event);
         if (!uri) return;
-        prev[uri] = prev[uri] || [];
-        // Avoid duplicate notes
-        if (!prev[uri].some((e) => e.id === event.id)) {
-          prev[uri].push(event);
+
+        next[uri] = next[uri] || [];
+        // Check if event already exists
+        if (!next[uri].some((e) => e.id === event.id)) {
+          hasNewEvents = true;
+          next[uri] = insertEventIntoDescendingList(next[uri], event);
         }
       });
-      return prev;
+
+      // Only return new state if we actually added new events
+      return hasNewEvents ? next : prev;
     });
-  };
+  }, []);
 
-  const subscribeToProfiles = (pubkeys: string[]) => {
-    if (pubkeys.length === 0) return;
+  const subscribeToProfiles = useCallback(
+    (pubkeys: string[]) => {
+      if (pubkeys.length === 0) return;
 
-    // Close any existing subscription before starting a new one
-    if (profilesSubscriptionsRef.current) {
-      profilesSubscriptionsRef.current.close();
-    }
-
-    const newPubkeys = pubkeys.filter(
-      (pk) => !subscribedProfiles.current.some((p) => p === pk)
-    );
-
-    if (newPubkeys.length === 0) return;
-
-    // Subscribing to new URIs
-    subscribedProfiles.current = [...subscribedProfiles.current, ...newPubkeys];
-
-    profilesSubscriptionsRef.current = pool?.subscribeMany(
-      relays,
-      [{ kinds: [0], authors: subscribedProfiles.current }],
-      {
-        onevent: (event) => {
-          const profile = JSON.parse(event.content) as NostrProfile;
-          setProfiles((prev) => {
-            prev[event.pubkey] = profile;
-            return prev;
-          });
-        },
+      // Close any existing subscription before starting a new one
+      if (profilesSubscriptionsRef.current) {
+        profilesSubscriptionsRef.current.close();
       }
-    );
-  };
+
+      const newPubkeys = pubkeys.filter(
+        (pk) => !subscribedProfiles.current.some((p) => p === pk)
+      );
+
+      if (newPubkeys.length === 0) return;
+
+      // Subscribing to new URIs
+      subscribedProfiles.current = [
+        ...subscribedProfiles.current,
+        ...newPubkeys,
+      ];
+
+      profilesSubscriptionsRef.current = pool?.subscribeMany(
+        relays,
+        [{ kinds: [0], authors: subscribedProfiles.current }],
+        {
+          onevent: (event) => {
+            const profile = JSON.parse(event.content) as NostrProfile;
+            setProfiles((prev) => {
+              prev[event.pubkey] = profile;
+              return prev;
+            });
+          },
+        }
+      );
+    },
+    [pool]
+  );
 
   // Subscribe to kind 1111 notes with #i tags
-  const subscribeToNotesByURI = async (URIs: URI[]) => {
-    if (URIs.length === 0) return;
+  const subscribeToNotesByURI = useCallback(
+    async (URIs: URI[]) => {
+      if (URIs.length === 0) return;
 
-    // Close any existing subscription before starting a new one
-    if (subRef.current) {
-      subRef.current.close();
-    }
+      // Close any existing subscription before starting a new one
+      if (subRef.current) {
+        subRef.current.close();
+      }
 
-    const cachedEvents = await db.getNostrEventsByURIs(URIs);
-    addNostrEventsToState(cachedEvents);
+      const cachedEvents = await db.getNostrEventsByURIs(URIs);
+      console.log(
+        ">>> NostrProvider subscribeToNotesByURI: cachedEvents",
+        cachedEvents
+      );
+      addNostrEventsToState(cachedEvents);
 
-    const newURIs = URIs.filter(
-      (uri) => !subscribedURIs.current.some((u) => u === uri.toLowerCase())
-    );
+      const newURIs = URIs.filter(
+        (uri) => !subscribedURIs.current.some((u) => u === uri.toLowerCase())
+      );
 
-    if (newURIs.length === 0) return;
+      if (newURIs.length === 0) return;
 
-    subscribedURIs.current = [
-      ...subscribedURIs.current,
-      ...newURIs.map((u) => u.toLowerCase() as URI),
-    ];
+      subscribedURIs.current = [
+        ...subscribedURIs.current,
+        ...newURIs.map((u) => u.toLowerCase() as URI),
+      ];
 
-    const filter = {
-      kinds: [1111], // Listen for kind 1111 notes
-      "#I": subscribedURIs.current, // Subscribe to multiple #i tags
-    };
+      const filter = {
+        kinds: [1111], // Listen for kind 1111 notes
+        "#I": subscribedURIs.current, // Subscribe to multiple #i tags
+      };
 
-    subRef.current = pool?.subscribeMany(relays, [filter], {
-      onevent: (event) => {
-        // cache event in indexedDB
-        const uri = getURIFromNostrEvent(event);
-        console.log(">>> NostrProvider event received:", uri, event);
-        if (!uri) return;
-        addNostrEventsToState([event]);
-        db.addNostrEvent(uri, event);
-      },
-    });
-  };
+      subRef.current = pool?.subscribeMany(relays, [filter], {
+        onevent: (event) => {
+          // cache event in indexedDB
+          const uri = getURIFromNostrEvent(event);
+          console.log(">>> NostrProvider event received:", uri, event);
+          if (!uri) return;
+          addNostrEventsToState([event]);
+          db.addNostrEvent(uri, event);
+        },
+      });
+    },
+    [pool, addNostrEventsToState]
+  );
 
-  const publishNote = async (
-    URI: URI,
-    { content, tags }: { content: string; tags: string[][] }
-  ) => {
-    if (!pool) throw new Error("Not connected");
-    const nsec = getItem("nostr_nsec");
-    if (!nsec) throw new Error("Not logged in");
+  const publishNote = useCallback(
+    async (
+      URI: URI,
+      { content, tags }: { content: string; tags: string[][] }
+    ) => {
+      if (!pool) throw new Error("Not connected");
+      const nsec = getItem("nostr_nsec");
+      if (!nsec) throw new Error("Not logged in");
 
-    const { data: secretKey } = decode(nsec);
-    const event: EventTemplate = {
-      kind: 1111,
-      created_at: Math.floor(Date.now() / 1000),
-      content,
-      tags: [["I", URI.toLowerCase()], ...tags],
-    };
-    const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
-    console.log(">>> NostrProvider publishNote: signedEvent", signedEvent);
-    await Promise.any(pool.publish(relays, signedEvent));
-    db.addNostrEvent(URI, signedEvent);
-    addNostrEventsToState([signedEvent]);
-  };
+      const { data: secretKey } = decode(nsec);
+      const event: EventTemplate = {
+        kind: 1111,
+        created_at: Math.floor(Date.now() / 1000),
+        content,
+        tags: [["I", URI.toLowerCase()], ...tags],
+      };
+      const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
+      console.log(">>> NostrProvider publishNote: signedEvent", signedEvent);
+      await Promise.any(pool.publish(relays, signedEvent));
+      db.addNostrEvent(URI, signedEvent);
+      addNostrEventsToState([signedEvent]);
+    },
+    [pool, addNostrEventsToState]
+  );
 
-  const updateProfile = async ({
-    name,
-    about,
-    picture,
-    website,
-  }: {
-    name: string;
-    about: string;
-    picture: string;
-    website: string;
-  }) => {
-    if (!pool) throw new Error("Not connected");
-    const nsec = getItem("nostr_nsec");
-    if (!nsec) throw new Error("Not logged in");
+  const updateProfile = useCallback(
+    async ({
+      name,
+      about,
+      picture,
+      website,
+    }: {
+      name: string;
+      about: string;
+      picture: string;
+      website: string;
+    }) => {
+      if (!pool) throw new Error("Not connected");
+      const nsec = getItem("nostr_nsec");
+      if (!nsec) throw new Error("Not logged in");
 
-    const { data: secretKey } = decode(nsec);
-    const profile = { name, about, picture, website } as NostrProfile;
-    const event: EventTemplate = {
-      kind: 0,
-      created_at: Math.floor(Date.now() / 1000),
-      content: JSON.stringify(profile),
-      tags: [],
-    };
-    const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
-    setProfiles((prev) => {
-      prev[signedEvent.pubkey] = profile;
-      return prev;
-    });
-    await Promise.any(pool.publish(relays, signedEvent));
-  };
+      const { data: secretKey } = decode(nsec);
+      const profile = { name, about, picture, website } as NostrProfile;
+      const event: EventTemplate = {
+        kind: 0,
+        created_at: Math.floor(Date.now() / 1000),
+        content: JSON.stringify(profile),
+        tags: [],
+      };
+      const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
+      setProfiles((prev) => {
+        prev[signedEvent.pubkey] = profile;
+        return prev;
+      });
+      await Promise.any(pool.publish(relays, signedEvent));
+    },
+    [pool]
+  );
 
   // Proceed if at least one relay is connected
   // const isReady = pool && connectedRelays.length > 0;
 
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      pool,
+      connectedRelays,
+      notesByURI,
+      subscribeToNotesByURI,
+      subscribeToProfiles,
+      profiles,
+      updateProfile,
+      publishNote,
+    }),
+    [
+      pool,
+      connectedRelays,
+      notesByURI,
+      subscribeToNotesByURI,
+      subscribeToProfiles,
+      profiles,
+      updateProfile,
+      publishNote,
+    ] // Include all dependencies
+  );
+
   return (
-    <NostrContext.Provider
-      value={{
-        pool,
-        connectedRelays,
-        notesByURI,
-        subscribeToNotesByURI,
-        subscribeToProfiles,
-        profiles,
-        updateProfile,
-        publishNote,
-      }}
-    >
+    <NostrContext.Provider value={contextValue}>
       {children}
     </NostrContext.Provider>
   );

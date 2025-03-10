@@ -6,12 +6,16 @@ export default function NoteForm({
   uri,
   inputRef,
   onCancel,
-  defaultValue,
+  content,
+  tags,
+  compact = false,
 }: {
   uri: URI;
   inputRef?: React.RefObject<HTMLInputElement | null>;
   onCancel?: () => void;
-  defaultValue?: string;
+  content?: string;
+  tags?: string[][];
+  compact?: boolean;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -58,8 +62,7 @@ export default function NoteForm({
       const previousNote = notesByURI[uri]
         ? notesByURI[uri][notesByURI[uri].length - 1]
         : { tags: [] };
-      // Here you would publish the profile data to nostr
-      // This is a placeholder for the actual implementation
+
       await publishNote(uri, {
         content: cleanDescription,
         tags: [
@@ -87,6 +90,18 @@ export default function NoteForm({
     }
   };
 
+  let defaultValue = content;
+  if (tags) {
+    let tagsString = "";
+    tags
+      .filter((t) => t[0] != "I")
+      .map((t) => {
+        tagsString += t[0] == "t" ? `#${t[1]} ` : `#${t[0]}:${t[1]} `;
+      });
+
+    defaultValue = `${content} ${tagsString}`;
+  }
+
   return (
     <form onSubmit={handleFormSubmit}>
       <Input
@@ -107,9 +122,12 @@ export default function NoteForm({
           Submitting...
         </div>
       )}
-      <div className="text-xs text-muted-foreground mt-1">
-        Press Enter to save. Press Escape to cancel. Use #hashtags to add tags.
-      </div>
+      {!compact && (
+        <div className="text-xs text-muted-foreground mt-1">
+          Press Enter to save. Press Escape to cancel. Use #hashtags to add
+          tags.
+        </div>
+      )}
     </form>
   );
 }

@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef, KeyboardEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { format } from "date-fns";
 import Link from "next/link";
 import { Loader2, Edit, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tag } from "@/components/ui/tag";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import NotesList from "@/components/NotesList";
 import { URI, useNostr } from "@/providers/NostrProvider";
 import type { Transaction, Address, TxHash } from "@/types";
+import EditMetadataForm from "@/components/EditMetadataForm";
+import TagsList from "./TagsList";
 interface TransactionRowProps {
   tx: Transaction;
   chain: string;
@@ -42,10 +43,7 @@ export function TransactionRow({
   chainId,
   expanded,
 }: TransactionRowProps) {
-  const [newDescription, setNewDescription] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editDescription, setEditDescription] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { publishNote, notesByURI, profiles } = useNostr();
 
@@ -70,132 +68,23 @@ export function TransactionRow({
 
   const uri = `${chainId}:tx:${tx.txHash}` as URI;
 
-  const lastNote =
-    notesByURI[uri] && notesByURI[uri][notesByURI[uri].length - 1];
+  const lastNote = notesByURI[uri] && notesByURI[uri][0];
 
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
-    if (isEditing && lastNote) {
-      // Get the base description
-      const baseDescription = lastNote.content || "";
-
-      // Get tags and format them as hashtags
-      const tags = lastNote.tags
-        .filter((t) => t[0] === "t")
-        .map((t) => `#${t[1]}`);
-
-      // Combine description and hashtags
-      let fullDescription = baseDescription;
-
-      // Only add space and hashtags if there are any tags
-      if (tags.length > 0) {
-        // Add a space if the description doesn't end with one
-        if (fullDescription && !fullDescription.endsWith(" ")) {
-          fullDescription += " ";
-        }
-        fullDescription += tags.join(" ");
-      }
-
-      setEditDescription(fullDescription);
-
-      // Focus the input when entering edit mode
+    if (isEditing) {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 0);
     }
-  }, [isEditing, notesByURI, lastNote]);
+  }, [isEditing]);
 
   const getDicebearUrl = (address: string) => {
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`;
   };
 
-  // Extract hashtags from description and return both tags and cleaned description
-  const extractHashtags = (
-    text: string
-  ): { tags: string[]; cleanDescription: string } => {
-    // Updated regex to match hashtags with simple values, key:attr format, and floating point numbers
-    const hashtagRegex = /#(\w+(?::\w+(?:\.\d+)?)?)/g;
-    const matches = text.match(hashtagRegex) || [];
-    const tags = matches.map((tag) => tag.substring(1)); // Remove the # symbol
-
-    // Remove hashtags from the description
-    const cleanDescription = text
-      .replace(hashtagRegex, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return { tags, cleanDescription };
-  };
-
-  const handleSubmitDescription = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDescription.trim()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // Extract hashtags and clean description
-      const { tags, cleanDescription } = extractHashtags(newDescription);
-
-      await publishNote(uri, {
-        content: cleanDescription,
-        tags: tags.map((tag) => {
-          if (tag.includes(":")) {
-            return tag.split(":");
-          }
-          return ["t", tag];
-        }),
-      });
-
-      setNewDescription("");
-    } catch (error) {
-      console.error("Error publishing note:", error);
-      alert("Failed to publish note. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSubmitEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editDescription.trim()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // Extract hashtags and clean description
-      const { tags, cleanDescription } = extractHashtags(editDescription);
-
-      await publishNote(uri, {
-        content: cleanDescription,
-        tags: tags.map((tag) => {
-          if (tag.includes(":")) {
-            return tag.split(":");
-          }
-          return ["t", tag];
-        }),
-      });
-
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating note:", error);
-      alert("Failed to update note. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditDescription("");
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    // Cancel editing when Escape key is pressed
-    if (e.key === "Escape") {
-      e.preventDefault();
-      handleCancelEdit();
-    }
   };
 
   const openProfileModal = (address: Address) => {
@@ -211,7 +100,7 @@ export function TransactionRow({
 
     try {
       const uri = `${chainId}:address:${currentAddress}`.toLowerCase() as URI;
-      const previousNote = notesByURI[uri][notesByURI[uri].length - 1];
+      const previousNote = notesByURI[uri][0];
       // Here you would publish the profile data to nostr
       // This is a placeholder for the actual implementation
       await publishNote(uri, {
@@ -241,7 +130,7 @@ export function TransactionRow({
     if (!address) return null;
     const uri = `${chainId}:address:${address}`.toLowerCase() as URI;
     if (!notesByURI[uri]) return null;
-    const profileNote = notesByURI[uri][notesByURI[uri].length - 1];
+    const profileNote = notesByURI[uri][0];
     if (profileNote) {
       return {
         name: profileNote.content || "",
@@ -290,24 +179,14 @@ export function TransactionRow({
         <div className="flex-1 min-w-0">
           {isEditing ? (
             <div className="space-y-2">
-              <form onSubmit={handleSubmitEdit}>
-                <Input
-                  ref={inputRef}
-                  placeholder="Edit description... (use #hashtags for tags)"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onBlur={handleCancelEdit}
-                  disabled={isSubmitting}
-                  className="text-sm"
-                />
-                {isSubmitting && (
-                  <div className="mt-1 text-xs text-muted-foreground flex items-center">
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    Submitting...
-                  </div>
-                )}
-              </form>
+              <EditMetadataForm
+                uri={uri}
+                compact={true}
+                inputRef={inputRef}
+                onCancel={handleCancelEdit}
+                content={lastNote.content}
+                tags={lastNote.tags}
+              />
 
               {/* Timestamp is always visible */}
               <div className="flex items-center text-sm">
@@ -330,21 +209,12 @@ export function TransactionRow({
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmitDescription} className="mt-1">
-              <Input
-                placeholder="Add a description... (use #hashtags for tags)"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                disabled={isSubmitting}
-                className="text-sm border-none shadow-none px-0 focus:px-2"
-              />
-              {isSubmitting && (
-                <div className="mt-1 text-xs text-muted-foreground flex items-center">
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  Submitting...
-                </div>
-              )}
-            </form>
+            <EditMetadataForm
+              uri={uri}
+              compact={true}
+              inputRef={inputRef}
+              onCancel={handleCancelEdit}
+            />
           )}
 
           {/* Timestamp and Tags - Only show when not editing */}
@@ -357,21 +227,7 @@ export function TransactionRow({
                 >
                   {formattedTimestamp}
                 </Link>
-                {lastNote?.tags.filter((t) => t[0] === "t").length > 0 && (
-                  <div className="flex flex-row gap-1 group relative">
-                    {lastNote.tags
-                      .filter((t) => t[0] === "t")
-                      .map((t) => (
-                        <Tag key={t[1]} value={t[1]} />
-                      ))}
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Edit className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                    </button>
-                  </div>
-                )}
+                <TagsList tags={lastNote?.tags} />
               </div>
             </div>
           )}

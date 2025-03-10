@@ -1,12 +1,14 @@
 import chains from "@/chains.json";
-import { ChainConfig } from "@/types";
+import type { ChainConfig } from "@/types/index.d.ts";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const contractAddress = searchParams.get("address");
+  const address = searchParams.get("address");
   const chain = searchParams.get("chain");
+  const contractaddress = searchParams.get("contractaddress");
   const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
   const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
+
   if (!apikey) {
     console.error("No API key found for", chainConfig.explorer_api);
     console.error(
@@ -15,7 +17,26 @@ export async function GET(req: Request) {
     );
     return Response.json({ error: "API key not configured" }, { status: 500 });
   }
-  const apicall = `${chainConfig.explorer_api}/api?module=contract&action=getcontractcreation&contractaddresses=${contractAddress}&apikey=${apikey}`;
+
+  const params = new URLSearchParams({
+    module: "account",
+    action: "tokentx",
+    startblock: "0",
+    endblock: "99999999",
+    sort: "desc",
+    apikey: apikey || "",
+  });
+
+  // Add optional filters
+  if (address) {
+    params.set("address", address);
+  }
+  if (contractaddress) {
+    params.set("contractaddress", contractaddress);
+  }
+
+  const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
+
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {

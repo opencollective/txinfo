@@ -5,6 +5,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
   const chain = searchParams.get("chain");
+  const tokenAddress = searchParams.get("tokenAddress");
   const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
   const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
 
@@ -17,11 +18,34 @@ export async function GET(req: Request) {
     return Response.json({ error: "API key not configured" }, { status: 500 });
   }
 
-  const apicall = `${chainConfig.explorer_api}/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${apikey}`;
+  const params = new URLSearchParams({
+    module: "account",
+    action: "tokentx",
+    startblock: "0",
+    endblock: "99999999",
+    sort: "desc",
+    apikey: apikey || "",
+  });
+
+  // Add optional filters
+  if (address) {
+    params.set("address", address);
+  }
+  if (tokenAddress) {
+    params.set("contractaddress", tokenAddress);
+  }
+
+  const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
+
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {
-    return Response.json(data);
+    return Response.json(data, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400",
+      },
+    });
   }
   return Response.json(
     { error: "Failed to fetch contract info" },
