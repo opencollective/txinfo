@@ -16,11 +16,12 @@ export default function Metadata({ uri }: { uri: URI }) {
   const { subscribeToProfiles, profiles, notesByURI, subscribeToNotesByURI } =
     useNostr();
   subscribeToNotesByURI([uri]);
-  subscribeToProfiles(notesByURI[uri].map((e) => e.pubkey));
+  subscribeToProfiles((notesByURI[uri] || []).map((e) => e.pubkey));
 
-  const latestNote = notesByURI[uri][notesByURI[uri].length - 1];
-  const description = latestNote.content;
-  const tags = latestNote.tags;
+  const latestNote =
+    notesByURI[uri] && notesByURI[uri][notesByURI[uri].length - 1];
+  const description = latestNote?.content;
+  const tags = latestNote?.tags;
 
   return (
     <div className="app">
@@ -32,7 +33,7 @@ export default function Metadata({ uri }: { uri: URI }) {
           </div>
           <div className="flex flex-col gap-2">
             <h2>Tags</h2>
-            <p>{tags.join(", ")}</p>
+            <p>{tags?.join(", ")}</p>
           </div>
         </div>
         <EditMetadataForm uri={uri} content={description} tags={tags} />

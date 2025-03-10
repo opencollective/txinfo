@@ -2,6 +2,7 @@ import { useState, KeyboardEvent } from "react";
 import { useNostr, type URI } from "@/providers/NostrProvider";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 export default function NoteForm({
   uri,
   inputRef,
@@ -114,7 +115,10 @@ export default function NoteForm({
         onKeyDown={handleKeyDown}
         onBlur={onCancel}
         disabled={isSubmitting}
-        className="text-sm"
+        className={cn(
+          "text-sm",
+          compact && "shadow-none border-none pl-0 focus:pl-2"
+        )}
       />
       {isSubmitting && (
         <div className="mt-1 text-xs text-muted-foreground flex items-center">

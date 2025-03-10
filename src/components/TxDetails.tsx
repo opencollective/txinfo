@@ -4,21 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { useTxDetails } from "@/utils/crypto";
-import { ethers } from "ethers";
 import { URI } from "@/providers/NostrProvider";
 import type { ChainConfig } from "@/types";
 import chains from "@/chains.json";
 
-export default function TxDetails({
-  uri,
-}: {
-  uri: URI;
-  provider: ethers.JsonRpcProvider;
-}) {
+export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
   const parts = uri.split(":");
-  const chain = parts[0];
+  const chainId = Number(parts[0]);
   const tx_hash = parts[2];
-  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
+  const chainConfig: ChainConfig | undefined = Object.values(chains).find(
+    (c) => c.id === chainId
+  ) as ChainConfig;
   const [txDetails, isLoading] = useTxDetails(chain, tx_hash);
 
   console.log("txDetails", txDetails);
