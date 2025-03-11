@@ -134,7 +134,6 @@ export default function Transactions({
             tokenAddress
           );
 
-        console.log(">>> past transactions from etherscan", transactions);
         if (transactions) {
           setTransactions(transactions.slice(0, 100));
         }

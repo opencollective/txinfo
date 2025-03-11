@@ -1,4 +1,4 @@
-import Dexie, { Table } from "dexie";
+import { Dexie } from "dexie";
 import { Event as NostrEvent } from "nostr-tools";
 import { Transaction, URI, Address, TxHash } from "@/types";
 
@@ -26,9 +26,9 @@ interface NostrEventRecord {
   event: string; // Full event as JSON string
 }
 
-export class AppDatabase extends Dexie {
-  transactions!: Table<TransactionRecord>;
-  nostrEvents!: Table<NostrEventRecord>;
+class Database extends Dexie {
+  transactions!: Dexie.Table<TransactionRecord>;
+  nostrEvents!: Dexie.Table<NostrEventRecord>;
 
   constructor() {
     super("AppDatabase");
@@ -176,5 +176,10 @@ export class AppDatabase extends Dexie {
   }
 }
 
-// Create and export a singleton instance
-export const db = new AppDatabase();
+let db: Database;
+
+if (typeof window !== "undefined") {
+  db = new Database();
+}
+
+export { db };

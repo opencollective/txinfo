@@ -56,6 +56,10 @@ export async function GET(req: Request) {
     params.set("contractaddress", contractaddress);
   }
 
+  if (!chainConfig.explorer_api) {
+    throw new Error(`No explorer API found for chain ${chain}`);
+  }
+
   const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
 
   const response = await fetch(apicall);

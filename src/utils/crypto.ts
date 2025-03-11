@@ -494,7 +494,11 @@ export async function getTransactionsFromEtherscan(
     params.set("contractaddress", tokenAddress);
   }
 
-  const apicall = `/api/etherscan?${params.toString()}`;
+  const apicall = `${
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_WEBSITE_URL
+  }/api/etherscan?${params.toString()}`;
 
   const response = await fetch(apicall);
   const data = await response.json();

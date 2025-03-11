@@ -154,7 +154,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addNostrEventsToState = useCallback((events: NostrEvent[]) => {
-    if (events.length === 0) return;
+    if (!events || events.length === 0) return;
 
     setNotesByURI((prev) => {
       let hasNewEvents = false;
@@ -225,7 +225,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         subRef.current.close();
       }
 
-      const cachedEvents = await db.getNostrEventsByURIs(URIs);
+      const cachedEvents = await db?.getNostrEventsByURIs(URIs);
       console.log(
         ">>> NostrProvider subscribeToNotesByURI: cachedEvents",
         cachedEvents
@@ -255,7 +255,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
           console.log(">>> NostrProvider event received:", uri, event);
           if (!uri) return;
           addNostrEventsToState([event]);
-          db.addNostrEvent(uri, event);
+          db?.addNostrEvent(uri, event);
         },
       });
     },
@@ -281,7 +281,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
       console.log(">>> NostrProvider publishNote: signedEvent", signedEvent);
       await Promise.any(pool.publish(relays, signedEvent));
-      db.addNostrEvent(URI, signedEvent);
+      db?.addNostrEvent(URI, signedEvent);
       addNostrEventsToState([signedEvent]);
     },
     [pool, addNostrEventsToState]
