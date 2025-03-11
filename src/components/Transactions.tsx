@@ -13,16 +13,21 @@ import type { Transaction } from "@/types/index.d.ts";
 import { URI, useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
-
+import { useLiveTransactions } from "@/hooks/useLiveTransactions";
+import { formatTimestamp } from "@/lib/utils";
 interface Props {
   chain: string;
-  address?: string;
-  tokenAddress?: string;
+  tokenAddress?: Address;
+  accountAddress?: Address;
 }
 
 const LIMIT_PER_PAGE = 50;
 
-export default function Transactions({ address, chain, tokenAddress }: Props) {
+export default function Transactions({
+  chain,
+  tokenAddress,
+  accountAddress,
+}: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
@@ -33,7 +38,13 @@ export default function Transactions({ address, chain, tokenAddress }: Props) {
     },
     selectedTokens: [],
   });
-
+  const { transactions: newTransactions, skippedTransactions } =
+    useLiveTransactions({
+      chain,
+      tokenAddress,
+      accountAddress,
+      maxTransactionsPerMinute: 3,
+    });
   const [error, setError] = useState<string | null>(null);
 
   const chainConfig = chains[chain as keyof typeof chains];
@@ -54,7 +65,7 @@ export default function Transactions({ address, chain, tokenAddress }: Props) {
           tx.token?.symbol?.length > 0 &&
           tx.token?.symbol?.length <= 6
         ) {
-          tokenMap[tx.token.address] = tx.token;
+          tokenMap[tx.token.address.toLowerCase() as Address] = tx.token;
         }
       });
       return Object.values(tokenMap);
@@ -114,14 +125,18 @@ export default function Transactions({ address, chain, tokenAddress }: Props) {
     //   );
     // }
 
-    const fetchAllTransactions = async () => {
+    const fetchPastTransactions = async () => {
       try {
         const transactions: Transaction[] | null =
-          await getTransactionsFromEtherscan(chain, address, tokenAddress);
+          await getTransactionsFromEtherscan(
+            chain,
+            accountAddress,
+            tokenAddress
+          );
 
-        console.log(">>> transactions", transactions);
+        console.log(">>> past transactions from etherscan", transactions);
         if (transactions) {
-          setTransactions(transactions);
+          setTransactions(transactions.slice(0, 100));
         }
       } catch (error) {
         console.error("Error fetching transactions:", error);
@@ -129,8 +144,12 @@ export default function Transactions({ address, chain, tokenAddress }: Props) {
       }
     };
 
-    fetchAllTransactions();
-  }, [address, chain, tokenAddress]);
+    fetchPastTransactions();
+  }, [accountAddress, chain, tokenAddress]);
+
+  useEffect(() => {
+    setTransactions((prev) => [...newTransactions, ...prev]);
+  }, [newTransactions]);
 
   // Subscribe to notes for all transactions at once
   const { subscribeToNotesByURI } = useNostr();
@@ -157,7 +176,7 @@ export default function Transactions({ address, chain, tokenAddress }: Props) {
 
       {/* Stats Cards */}
       <StatsCards
-        accountAddress={address as Address}
+        accountAddress={accountAddress as Address}
         transactions={filteredTransactions}
         tokens={
           transactionsFilter.selectedTokens.length > 0
@@ -166,6 +185,14 @@ export default function Transactions({ address, chain, tokenAddress }: Props) {
         }
         timeRangeLabel={transactionsFilter.dateRange.label}
       />
+
+      {skippedTransactions > 0 && (
+        <div className="text-sm text-muted-foreground">
+          {skippedTransactions} new transactions since{" "}
+          {formatTimestamp((transactions[0] as Transaction).timestamp)} (refresh
+          to load)
+        </div>
+      )}
 
       {/* Transactions List */}
       {filteredTransactions.map((tx, idx) => {

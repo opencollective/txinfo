@@ -11,7 +11,7 @@ export default async function Page({
     <div className="app">
       <div className="flex flex-col gap-4">
         <AddressInfo chain={chain} address={address as Address} />
-        <Transactions chain={chain} address={address} />
+        <Transactions chain={chain} accountAddress={address as Address} />
       </div>
     </div>
   );

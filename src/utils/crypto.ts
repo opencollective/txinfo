@@ -1,10 +1,16 @@
 "use client";
 
-import { ethers } from "ethers";
+import { ethers, Log } from "ethers";
 import ERC20_ABI from "../erc20.abi.json";
 import chains from "../chains.json";
 import { useState, useEffect, useRef } from "react";
-import type { Transaction, Token, EtherscanTransfer } from "@/types/index.d.ts";
+import type {
+  Transaction,
+  Token,
+  EtherscanTransfer,
+  Address,
+  TxHash,
+} from "@/types/index.d.ts";
 import * as crypto from "./crypto.server";
 export const truncateAddress = crypto.truncateAddress;
 
@@ -228,6 +234,14 @@ export async function getTxDetails(
   }
 }
 
+/**
+ * Get the transactions in a block range from or to an address (sorted by time DESC, so newest first)
+ * @param chain - The chain to get the block range for
+ * @param address - The address to get the block range for
+ * @param fromBlock - The starting block
+ * @param toBlock - The ending block
+ * @param provider - The provider to use
+ */
 export async function processBlockRange(
   chain: string,
   address: string,
@@ -371,6 +385,32 @@ export async function getBlockRange(
   return res.filter((tx) => tx !== null) as Transaction[];
 }
 
+export async function getTxFromLog(
+  chain: string,
+  log: Log,
+  provider: ethers.JsonRpcProvider
+): Promise<Transaction> {
+  const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
+  const parsedLog = contract.interface.parseLog(log);
+  const from = parsedLog?.args[0].toLowerCase() as Address;
+  const to = parsedLog?.args[1].toLowerCase() as Address;
+  const value = parsedLog?.args[2].toString();
+  const block = await provider.getBlock(log.blockNumber);
+  const token = await getTokenDetails(chain, log.address, provider);
+  const tx = {
+    blockNumber: log.blockNumber,
+    timestamp: block?.timestamp as number,
+    txIndex: log.transactionIndex,
+    logIndex: log.index,
+    txHash: log.transactionHash as TxHash,
+    token,
+    from,
+    to,
+    value,
+  };
+  return tx;
+}
+
 export async function isEOA(
   chain: string,
   address: string,
@@ -394,6 +434,12 @@ export async function isEOA(
   }
 }
 
+/**
+ * Get the first and last block for an address
+ * @param chain - The chain to get the block range for
+ * @param address - The address to get the block range for
+ * @returns { firstBlock: number, lastBlock: number | undefined }
+ */
 export async function getBlockRangeForAddress(
   chain: string,
   address: string

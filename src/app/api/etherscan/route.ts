@@ -1,11 +1,30 @@
 import chains from "@/chains.json";
-import type { ChainConfig } from "@/types/index.d.ts";
+import type { ChainConfig, EtherscanResponse } from "@/types/index.d.ts";
+
+let cache: Record<string, EtherscanResponse> = {};
+
+setInterval(() => {
+  cache = {};
+}, 1000 * 180); // empty cache every 3 minutes
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
   const chain = searchParams.get("chain");
   const contractaddress = searchParams.get("contractaddress");
+
+  const cacheKey = `${chain}:${contractaddress}:${address}`;
+
+  if (cache[cacheKey]) {
+    console.log(">>> cache hit", cacheKey);
+    return Response.json(
+      { ...cache[cacheKey], cached: true },
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
   const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
   const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
 
@@ -27,6 +46,8 @@ export async function GET(req: Request) {
     apikey: apikey || "",
   });
 
+  console.log(">>> params", params.toString());
+
   // Add optional filters
   if (address) {
     params.set("address", address);
@@ -40,6 +61,7 @@ export async function GET(req: Request) {
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {
+    cache[cacheKey] = data;
     return Response.json(data, {
       headers: {
         "Content-Type": "application/json",
@@ -47,8 +69,9 @@ export async function GET(req: Request) {
       },
     });
   }
+  console.error("Failed to fetch contract info", data);
   return Response.json(
-    { error: "Failed to fetch contract info" },
+    { error: `Failed to fetch contract info (${data?.result})` },
     { status: 500 }
   );
 }

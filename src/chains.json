@@ -21,6 +21,11 @@
       "https://polygon.llamarpc.com",
       "https://polygon-rpc.com",
       "https://polygon-bor-rpc.publicnode.com"
+    ],
+    "ws": [
+      "wss://polygon.drpc.org",
+      "wss://polygon-bor-rpc.publicnode.com",
+      "wss://polygon.llamarpc.com"
     ]
   },
   "celo": {
@@ -33,6 +38,11 @@
       "https://1rpc.io/celo",
       "https://forno.celo.org",
       "https://celo.drpc.org"
+    ],
+    "ws": [
+      "wss://forno.celo.org/ws",
+      "wss://celo.drpc.org",
+      "wss://celo-bor-rpc.publicnode.com"
     ]
   },
   "avalanche": {
@@ -81,6 +91,14 @@
       "https://base-pokt.nodies.app",
       "https://base.rpc.subquery.network/public",
       "https://base.meowrpc.com"
+    ],
+    "ws": [
+      "wss://0xrpc.io/base",
+      "wss://base-rpc.publicnode.com",
+      "wss://base.gateway.tenderly.co",
+      "wss://base.drpc.org",
+      "wss://base.llamarpc.com",
+      "wss://base.meowrpc.com/ws"
     ]
   },
   "ethereum_classic": {
@@ -106,6 +124,12 @@
       "https://rpc.gnosis.gateway.fm",
       "https://gnosis.oat.farm",
       "https://gnosis-pokt.nodies.app"
+    ],
+    "ws": [
+      "wss://rpc.gnosischain.com/wss",
+      "wss://0xrpc.io/gno",
+      "wss://gnosis-rpc.publicnode.com",
+      "wss://gnosis-pokt.nodies.app/ws"
     ]
   }
 }

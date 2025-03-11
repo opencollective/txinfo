@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { ethers } from "ethers";
-import { format } from "date-fns";
 import Link from "next/link";
 import { Loader2, Edit, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +21,7 @@ import { URI, useNostr } from "@/providers/NostrProvider";
 import type { Transaction, Address, TxHash } from "@/types";
 import EditMetadataForm from "@/components/EditMetadataForm";
 import TagsList from "./TagsList";
+import { formatNumber, formatTimestamp } from "@/lib/utils";
 interface TransactionRowProps {
   tx: Transaction;
   chain: string;
@@ -31,6 +31,7 @@ interface TransactionRowProps {
 }
 
 interface ProfileData {
+  address: Address | undefined;
   name: string;
   about: string;
   picture: string;
@@ -53,18 +54,13 @@ export function TransactionRow({
     Address | TxHash | undefined
   >();
   const [profileData, setProfileData] = useState<ProfileData>({
+    address: undefined,
     name: "",
     about: "",
     picture: "",
     website: "",
   });
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
-
-  // Format timestamp once
-  const formattedTimestamp = format(
-    tx.timestamp * 1000,
-    "MMM d, yyyy 'at' HH:mm"
-  );
 
   const uri = `${chainId}:tx:${tx.txHash}` as URI;
 
@@ -87,8 +83,9 @@ export function TransactionRow({
     setIsEditing(false);
   };
 
-  const openProfileModal = (address: Address) => {
-    setCurrentAddress(address);
+  const openProfileModal = (profile: ProfileData) => {
+    setCurrentAddress(profile.address as Address);
+    setProfileData(profile);
     setProfileModalOpen(true);
   };
 
@@ -126,24 +123,40 @@ export function TransactionRow({
     }
   };
 
-  const getProfileFromNotes = (address: Address): ProfileData | null => {
-    if (!address) return null;
+  const getProfileForAddress = (address: Address): ProfileData => {
+    const defaultProfile = {
+      address: address || undefined,
+      name: "",
+      about: "",
+      picture: "",
+      website: "",
+    };
+    if (!address) return defaultProfile;
     const uri = `${chainId}:address:${address}`.toLowerCase() as URI;
-    if (!notesByURI[uri]) return null;
+    if (!notesByURI[uri]) return defaultProfile;
     const profileNote = notesByURI[uri][0];
     if (profileNote) {
       return {
+        address: address,
         name: profileNote.content || "",
         about: profileNote.tags.find((t) => t[0] === "about")?.[1] || "",
         picture: profileNote.tags.find((t) => t[0] === "picture")?.[1] || "",
         website: profileNote.tags.find((t) => t[0] === "website")?.[1] || "",
       };
     }
-    return null;
+    return defaultProfile;
   };
 
-  const fromProfile = getProfileFromNotes(tx.from);
-  const toProfile = getProfileFromNotes(tx.to);
+  const fromProfile = getProfileForAddress(
+    tx.from === "0x0000000000000000000000000000000000000000"
+      ? tx.token.address
+      : tx.from
+  );
+  const toProfile = getProfileForAddress(
+    tx.to === "0x0000000000000000000000000000000000000000"
+      ? tx.token.address
+      : tx.to
+  );
 
   return (
     <div className="space-y-4" key={tx.txHash}>
@@ -152,26 +165,34 @@ export function TransactionRow({
         {/* Avatars */}
         <div className="relative">
           <Avatar
-            title={fromProfile?.name || tx.from}
+            title={fromProfile?.name || fromProfile?.address}
             className="h-12 w-12 border-2 border-gray-300 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-            onClick={() => openProfileModal(tx.from)}
+            onClick={() => openProfileModal(fromProfile)}
           >
             <AvatarImage
-              src={fromProfile?.picture || getDicebearUrl(tx.from)}
-              alt={tx.from}
+              src={
+                fromProfile?.picture ||
+                getDicebearUrl(fromProfile?.address as string)
+              }
+              alt={fromProfile?.address}
             />
-            <AvatarFallback>{tx.from.slice(0, 2)}</AvatarFallback>
+            <AvatarFallback>{fromProfile?.address?.slice(0, 2)}</AvatarFallback>
           </Avatar>
           <Avatar
-            title={toProfile?.name || tx.to}
+            title={toProfile?.name || toProfile?.address}
             className="absolute -bottom-2 -right-2 h-8 w-8 border-2 border-background border-gray-300 bg-white cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-            onClick={() => openProfileModal(tx.to || "")}
+            onClick={() => openProfileModal(toProfile)}
           >
             <AvatarImage
-              src={toProfile?.picture || getDicebearUrl(tx.to)}
-              alt={tx.to}
+              src={
+                toProfile?.picture ||
+                getDicebearUrl(toProfile?.address as string)
+              }
+              alt={toProfile?.address}
             />
-            <AvatarFallback>{tx.to?.slice(0, 2) || "CT"}</AvatarFallback>
+            <AvatarFallback>
+              {toProfile?.address?.slice(0, 2) || "CT"}
+            </AvatarFallback>
           </Avatar>
         </div>
 
@@ -194,7 +215,7 @@ export function TransactionRow({
                   href={`/${chain}/tx/${tx.txHash}`}
                   className="text-muted-foreground hover:underline"
                 >
-                  {formattedTimestamp}
+                  {formatTimestamp(tx.timestamp)}
                 </Link>
               </div>
             </div>
@@ -225,7 +246,7 @@ export function TransactionRow({
                   href={`/${chain}/tx/${tx.txHash}`}
                   className="text-muted-foreground hover:underline"
                 >
-                  {formattedTimestamp}
+                  {formatTimestamp(tx.timestamp)}
                 </Link>
                 <TagsList tags={lastNote?.tags} />
               </div>
@@ -236,7 +257,9 @@ export function TransactionRow({
         {/* Amount */}
         <div className="text-right">
           <div className="text-lg font-semibold">
-            {Number(ethers.formatUnits(tx.value, tx.token.decimals)).toFixed(2)}{" "}
+            {formatNumber(
+              Number(ethers.formatUnits(tx.value, tx.token.decimals))
+            )}{" "}
             <span className="text-sm font-normal text-muted-foreground">
               {tx.token.symbol?.substring(0, 6)}
             </span>
@@ -275,9 +298,7 @@ export function TransactionRow({
                 </Label>
                 <Input
                   id="name"
-                  defaultValue={
-                    getProfileFromNotes(currentAddress as Address)?.name
-                  }
+                  defaultValue={profileData.name}
                   onChange={(e) =>
                     setProfileData({ ...profileData, name: e.target.value })
                   }
@@ -291,9 +312,7 @@ export function TransactionRow({
                 </Label>
                 <Input
                   id="website"
-                  defaultValue={
-                    getProfileFromNotes(currentAddress as Address)?.website
-                  }
+                  defaultValue={profileData.website}
                   onChange={(e) =>
                     setProfileData({ ...profileData, website: e.target.value })
                   }
@@ -307,9 +326,7 @@ export function TransactionRow({
                 </Label>
                 <Input
                   id="picture"
-                  defaultValue={
-                    getProfileFromNotes(currentAddress as Address)?.picture
-                  }
+                  defaultValue={profileData.picture}
                   onChange={(e) =>
                     setProfileData({ ...profileData, picture: e.target.value })
                   }
@@ -324,9 +341,7 @@ export function TransactionRow({
                 </Label>
                 <Textarea
                   id="about"
-                  defaultValue={
-                    getProfileFromNotes(currentAddress as Address)?.about
-                  }
+                  defaultValue={profileData.about}
                   onChange={(e) =>
                     setProfileData({ ...profileData, about: e.target.value })
                   }

@@ -26,6 +26,12 @@ export interface Transaction {
 /**
  * Etherscan API response for token transfers
  */
+export type EtherscanResponse = {
+  status: string;
+  message: string;
+  result: EtherscanTransfer[];
+};
+
 export type EtherscanTransfer = {
   blockNumber: number;
   timeStamp: number;
@@ -50,8 +56,9 @@ export type EtherscanTransfer = {
 
 export type ChainConfig = {
   id: number;
-  rpc: string | string[];
   explorer_url: string;
   explorer_api?: string;
   explorer_name: string;
+  rpc: string | string[];
+  ws?: string | string[];
 };

@@ -13,34 +13,7 @@ import { truncateAddress } from "@/utils/crypto";
 import type { Transaction } from "@/types/index.d.ts";
 import { useMemo } from "react";
 import type { Token } from "@/types/index.d.ts";
-
-const formatNumber = (number: number, precision: number) => {
-  let num,
-    prec,
-    suffix = "";
-  const locale =
-    typeof window !== "undefined" ? window.navigator.language : "en-US";
-
-  if (number > 1000000) {
-    num = number / 1000000;
-    prec = 2;
-    suffix = "M";
-  } else if (number > 1000) {
-    num = number / 1000;
-    prec = 2;
-    suffix = "K";
-  } else {
-    num = number.toFixed(precision);
-    prec = precision || 2;
-  }
-  return (
-    num.toLocaleString(locale, {
-      minimumFractionDigits: prec,
-      maximumFractionDigits: prec,
-    }) + suffix
-  );
-};
-
+import { formatNumber } from "@/lib/utils";
 export default function StatsCards({
   transactions,
   accountAddress = "0x0000000000000000000000000000000000000000" as Address,

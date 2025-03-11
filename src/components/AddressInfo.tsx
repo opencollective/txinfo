@@ -33,6 +33,7 @@ export default function AddressDetails({
   };
 
   const latestNote = notesByURI[uri as URI]?.[0];
+
   const tags =
     latestNote?.tags.filter((t) => t[0] === "t").map((tag) => `#${tag[1]}`) ||
     [];
@@ -55,7 +56,7 @@ export default function AddressDetails({
             ) : (
               <div className="group relative flex flex-row items-center">
                 <span className="pr-2">
-                  {latestNote?.content || "Unknown account"}
+                  {latestNote?.content || "Unknown address"}
                 </span>
                 {!isEditing && tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 my-2">
