@@ -1,16 +1,16 @@
 <svg width="980" height="980" viewBox="0 0 980 980" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="980" height="980" fill="black"/>
+<rect width="980" height="980" />
 <line x1="228.536" y1="458.464" x2="627.536" y2="857.464" stroke="white" stroke-width="10"/>
 <line x1="632.536" y1="592.536" x2="334.536" y2="890.536" stroke="white" stroke-width="10"/>
 <line x1="408.536" y1="316.536" x2="110.536" y2="614.536" stroke="white" stroke-width="10"/>
-<rect x="22.0711" y="590.725" width="142" height="142" transform="rotate(-45 22.0711 590.725)" fill="#010101" stroke="white" stroke-width="10"/>
-<rect x="143.693" y="469.103" width="142" height="142" transform="rotate(-45 143.693 469.103)" fill="#010101" stroke="white" stroke-width="10"/>
-<rect x="265.316" y="347.48" width="142" height="142" transform="rotate(-45 265.316 347.48)" fill="#010101" stroke="white" stroke-width="10"/>
+<rect x="22.0711" y="590.725" width="142" height="142" transform="rotate(-45 22.0711 590.725)" fill="currentColor" stroke="white" stroke-width="10"/>
+<rect x="143.693" y="469.103" width="142" height="142" transform="rotate(-45 143.693 469.103)" fill="currentColor" stroke="white" stroke-width="10"/>
+<rect x="265.316" y="347.48" width="142" height="142" transform="rotate(-45 265.316 347.48)" fill="currentColor" stroke="white" stroke-width="10"/>
 <rect x="270.973" y="596.382" width="142" height="142" transform="rotate(-45 270.973 596.382)" fill="white" stroke="white" stroke-width="10"/>
 <rect x="629.061" y="495.994" width="142" height="142" transform="rotate(45 629.061 495.994)" fill="white" stroke="white" stroke-width="10"/>
 <rect x="391.181" y="723.661" width="152" height="152" transform="rotate(-45 391.181 723.661)" fill="white"/>
 <rect x="501.781" y="623.273" width="142" height="142" transform="rotate(45 501.781 623.273)" fill="white" stroke="white" stroke-width="10"/>
 <rect x="525.531" y="850.94" width="142" height="142" transform="rotate(-45 525.531 850.94)" fill="white" stroke="white" stroke-width="10"/>
 <rect x="374.502" y="750.553" width="142" height="142" transform="rotate(45 374.502 750.553)" fill="white" stroke="white" stroke-width="10"/>
-<circle cx="766.5" cy="475.5" r="69.5" fill="#010101" stroke="white" stroke-width="10"/>
+<circle cx="766.5" cy="475.5" r="69.5" fill="currentColor" stroke="white" stroke-width="10"/>
 </svg>

@@ -53,9 +53,9 @@ export default function Filters({
   onChange: (filter: Filter) => void;
 }) {
   const [dateRange, setDateRange] = useState<DateRange>({
-    start: startOfMonth(new Date()),
-    end: endOfMonth(new Date()),
-    label: format(new Date(), "MMMM yyyy"),
+    start: null,
+    end: null,
+    label: "All Time",
   });
   const [selectedTokens, setSelectedTokens] = useState<Token[]>([]);
   const [tokenSelectOpen, setTokenSelectOpen] = useState(false);

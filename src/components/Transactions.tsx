@@ -6,7 +6,7 @@ import chains from "../chains.json";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { TransactionRow } from "@/components/TransactionRow";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { isWithinInterval } from "date-fns";
 import { Loader2, X } from "lucide-react";
 import type { Address, TokenStats } from "@/types";
 import type { Transaction } from "@/types/index.d.ts";
@@ -34,9 +34,9 @@ export default function Transactions({
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
     dateRange: {
-      start: startOfMonth(new Date()),
-      end: endOfMonth(new Date()),
-      label: format(new Date(), "MMMM yyyy"),
+      start: null,
+      end: null,
+      label: "All Time",
     },
     type: "all",
     selectedTokens: [],
@@ -154,7 +154,7 @@ export default function Transactions({
       );
     }
 
-    return filtered;
+    return filtered.slice(0, 100);
   }, [transactions, transactionsFilter, accountAddress]);
 
   useMemo(() => {
@@ -181,7 +181,7 @@ export default function Transactions({
             tokenAddress
           );
         if (transactions) {
-          setTransactions(transactions.slice(0, 100));
+          setTransactions(transactions.slice(0, 500));
         }
         setIsLoading(false);
       } catch (error) {
