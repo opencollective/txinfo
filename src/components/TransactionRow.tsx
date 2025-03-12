@@ -270,9 +270,11 @@ export function TransactionRow({
                 Number(ethers.formatUnits(tx.value, tx.token.decimals))
               )}{" "}
             </span>
-            <span className="text-sm font-normal text-muted-foreground">
-              {tx.token.symbol?.substring(0, 6)}
-            </span>
+            <Link href={`/${chain}/token/${tx.token.address}`}>
+              <span className="text-sm font-normal text-muted-foreground">
+                {tx.token.symbol?.substring(0, 6)}
+              </span>
+            </Link>
           </div>
         </div>
       </div>
