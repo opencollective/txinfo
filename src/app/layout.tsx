@@ -26,10 +26,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="[@media(prefers-color-scheme:dark)]:dark">
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <main className="flex flex-col gap-4 max-w-screen-lg mx-auto p-16">
+        <main className="flex flex-col gap-4 max-w-screen-lg mx-auto p-4 md:p-16">
           <NostrProvider>{children}</NostrProvider>
           <Toaster />
         </main>

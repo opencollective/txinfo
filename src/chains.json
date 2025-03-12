@@ -3,6 +3,7 @@
     "id": 1,
     "explorer_url": "https://etherscan.io",
     "explorer_name": "Etherscan",
+    "explorer_api": "https://api.etherscan.io",
     "rpc": [
       "https://eth.llamarpc.com",
       "https://eth.drpc.org",
@@ -100,12 +101,6 @@
       "wss://base.llamarpc.com",
       "wss://base.meowrpc.com/ws"
     ]
-  },
-  "ethereum_classic": {
-    "id": 61,
-    "explorer_url": "https://classic.etherscan.io",
-    "explorer_name": "Etherscan Classic",
-    "rpc": "https://ethereumclassic.drpc.org"
   },
   "ethereum_sepolia": {
     "id": 11155111,

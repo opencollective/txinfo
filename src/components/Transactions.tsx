@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import React from "react";
 import { TransactionRow } from "@/components/TransactionRow";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import type { Address, TokenStats } from "@/types";
 import type { Transaction } from "@/types/index.d.ts";
 import { URI, useNostr } from "@/providers/NostrProvider";
@@ -29,6 +29,7 @@ export default function Transactions({
   tokenAddress,
   accountAddress,
 }: Props) {
+  const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
@@ -142,7 +143,7 @@ export default function Transactions({
             .includes(tx.token.address)
       );
     }
-    console.log(">>> transactionsFilter", transactionsFilter);
+
     if (accountAddress && transactionsFilter.type === "in") {
       filtered = filtered.filter(
         (tx) => tx.to === accountAddress.toLowerCase()
@@ -179,10 +180,10 @@ export default function Transactions({
             accountAddress,
             tokenAddress
           );
-        console.log(">>> past transactions from etherscan", transactions);
         if (transactions) {
           setTransactions(transactions.slice(0, 100));
         }
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching transactions:", error);
         setError("Unable to load transactions. Please try again later.");
@@ -210,6 +211,14 @@ export default function Transactions({
 
     subscribeToNotesByURI(Array.from(uris) as URI[]);
   }, [filteredTransactions, chainConfig, subscribeToNotesByURI]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full py-24">
+        <Loader2 className="h-10 w-10 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

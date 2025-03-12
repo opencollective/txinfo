@@ -294,16 +294,13 @@ export function TransactionRow({
               <User className="h-5 w-5" />
               Edit Profile
             </DialogTitle>
-            <DialogDescription>
-              Update profile information for address{" "}
-              {currentAddress?.slice(0, 6)}...{currentAddress?.slice(-4)}
-            </DialogDescription>
+            <DialogDescription>{currentAddress}</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleProfileSubmit}>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+                <Label htmlFor="name" className="sm:text-right">
                   Name
                 </Label>
                 <Input
@@ -312,12 +309,12 @@ export function TransactionRow({
                   onChange={(e) =>
                     setProfileData({ ...profileData, name: e.target.value })
                   }
-                  className="col-span-3"
+                  className="sm:col-span-3"
                 />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="picture" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+                <Label htmlFor="picture" className="sm:text-right">
                   Website
                 </Label>
                 <Input
@@ -326,12 +323,12 @@ export function TransactionRow({
                   onChange={(e) =>
                     setProfileData({ ...profileData, website: e.target.value })
                   }
-                  className="col-span-3"
+                  className="sm:col-span-3"
                   placeholder="https://example.com"
                 />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="picture" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+                <Label htmlFor="picture" className="sm:text-right">
                   Picture URL
                 </Label>
                 <Input
@@ -340,13 +337,13 @@ export function TransactionRow({
                   onChange={(e) =>
                     setProfileData({ ...profileData, picture: e.target.value })
                   }
-                  className="col-span-3"
+                  className="sm:col-span-3"
                   placeholder="https://example.com/avatar.jpg"
                 />
               </div>
 
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="about" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2 sm:gap-4">
+                <Label htmlFor="about" className="sm:text-right">
                   About
                 </Label>
                 <Textarea
@@ -355,30 +352,32 @@ export function TransactionRow({
                   onChange={(e) =>
                     setProfileData({ ...profileData, about: e.target.value })
                   }
-                  className="col-span-3"
+                  className="sm:col-span-3"
                   rows={3}
                 />
               </div>
             </div>
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setProfileModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmittingProfile}>
-                {isSubmittingProfile ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
+              <div className="flex flex-col sm:flex-row-reverse gap-2">
+                <Button type="submit" disabled={isSubmittingProfile}>
+                  {isSubmittingProfile ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setProfileModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>

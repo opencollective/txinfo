@@ -46,8 +46,6 @@ export async function GET(req: Request) {
     apikey: apikey || "",
   });
 
-  console.log(">>> params", params.toString());
-
   // Add optional filters
   if (address) {
     params.set("address", address);

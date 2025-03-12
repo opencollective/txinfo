@@ -198,7 +198,7 @@ export default function Filters({
                 <span className="text-muted-foreground">
                   {dateRange.label === "All Time"
                     ? transactionStats.total.all
-                    : transactionStats.byMonth[dateRange.label].all}
+                    : transactionStats.byMonth[dateRange.label]?.all}
                 </span>
               </div>
             ) : type === "in" ? (
@@ -208,7 +208,7 @@ export default function Filters({
                 <span className="text-muted-foreground">
                   {dateRange.label === "All Time"
                     ? transactionStats.total.in
-                    : transactionStats.byMonth[dateRange.label].in}
+                    : transactionStats.byMonth[dateRange.label]?.in}
                 </span>
               </div>
             ) : (
@@ -218,7 +218,7 @@ export default function Filters({
                 <span className="text-muted-foreground ml-2">
                   {dateRange.label === "All Time"
                     ? transactionStats.total.out
-                    : transactionStats.byMonth[dateRange.label].out}
+                    : transactionStats.byMonth[dateRange.label]?.out}
                 </span>
               </div>
             )}

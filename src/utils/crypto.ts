@@ -498,25 +498,30 @@ export async function getTransactionsFromEtherscan(
   }/api/etherscan?${params.toString()}`;
 
   const response = await fetch(apicall);
-  const data = await response.json();
-  if (data.status === "1") {
-    return data.result.map((tx: EtherscanTransfer) => ({
-      blockNumber: Number(tx.blockNumber),
-      txHash: tx.hash,
-      txIndex: Number(tx.transactionIndex),
-      timestamp: Number(tx.timeStamp),
-      from: tx.from,
-      to: tx.to,
-      value: tx.value,
-      token: {
-        address: tx.contractAddress,
-        name: tx.tokenName,
-        decimals: Number(tx.tokenDecimal),
-        symbol: tx.tokenSymbol,
-      },
-    }));
-  } else {
-    console.log(">>> error from /api/etherscan", data);
+  try {
+    const data = await response.json();
+    if (data.status === "1") {
+      return data.result.map((tx: EtherscanTransfer) => ({
+        blockNumber: Number(tx.blockNumber),
+        txHash: tx.hash,
+        txIndex: Number(tx.transactionIndex),
+        timestamp: Number(tx.timeStamp),
+        from: tx.from,
+        to: tx.to,
+        value: tx.value,
+        token: {
+          address: tx.contractAddress,
+          name: tx.tokenName,
+          decimals: Number(tx.tokenDecimal),
+          symbol: tx.tokenSymbol,
+        },
+      }));
+    } else {
+      console.log(">>> error from /api/etherscan", data);
+      return null;
+    }
+  } catch (e) {
+    console.error("Error in getTransactionsFromEtherscan:", e);
     return null;
   }
 }
