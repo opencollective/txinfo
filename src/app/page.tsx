@@ -72,7 +72,9 @@ export default function Home() {
               <Link
                 key={uri}
                 href={`/${uri}`}
-                className="flex items-center justify-between p-4 rounded-lg border hover shadow-none transition-colors"
+                className="flex items-center justify-between p-4 rounded-lg border 
+                  hover:bg-muted/50 active:bg-muted 
+                  transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col">
