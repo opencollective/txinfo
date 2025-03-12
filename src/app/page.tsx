@@ -185,7 +185,7 @@ export default function Home() {
             href="nostr:npub1xsp9fcq340dzaqjctjl7unu3k0c82jdxc350uqym70k8vedzuvdst562dr"
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
-            <img src="/nostr.svg" className="h-5 w-5" />
+            <img src="/nostr.svg" className="h-5 w-5 dark:invert" />
             <span>xavierdamman.com</span>
           </a>
         </div>
