@@ -19,12 +19,13 @@ export const metadata: Metadata = {
   description: "Add metadata to any blockchain transaction using Nostr",
   openGraph: {
     title: "TxInfo - Add metadata to any blockchain transaction",
-    description: "Add metadata to any blockchain transaction using Nostr",
+    description:
+      "Add metadata to any blockchain address or transaction using Nostr",
     url: "https://txinfo.xyz",
-    siteName: "TxInfo",
+    siteName: "TxInfo.xyz",
     images: [
       {
-        url: "https://txinfo.xyz/txinfo-light.png", // 1200x630px recommended
+        url: "https://txinfo.xyz/txinfo-ogimage.png", // 1200x630px recommended
         width: 1200,
         height: 630,
         alt: "TxInfo - Add metadata to any blockchain transaction",
