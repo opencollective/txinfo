@@ -18,7 +18,15 @@ export const formatNumber = (
     typeof window !== "undefined" ? window.navigator.language : "en-US";
 
   if (short) {
-    if (Math.abs(number) > 1000000) {
+    if (Math.abs(number) > 1000000000000) {
+      num = number / 1000000000000;
+      prec = 2;
+      suffix = "T";
+    } else if (Math.abs(number) > 1000000000) {
+      num = number / 1000000000;
+      prec = 2;
+      suffix = "B";
+    } else if (Math.abs(number) > 1000000) {
       num = number / 1000000;
       prec = 2;
       suffix = "M";
@@ -36,10 +44,10 @@ export const formatNumber = (
   );
 };
 
-export const formatTimestamp = (ts: number, short = true) => {
+export const formatTimestamp = (ts: number, format = "MMM d HH:mm") => {
   return formatInTimeZone(
     ts * 1000,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
-    short ? "MMM d HH:mm" : "MMM d, yyyy 'at' HH:mm:ss zzz"
+    format // "MMM d, yyyy 'at' HH:mm:ss zzz"
   );
 };

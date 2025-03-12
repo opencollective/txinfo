@@ -6,7 +6,7 @@ import {
   ArrowUpRight,
   Sigma,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatTimestamp } from "@/lib/utils";
 import { ethers } from "ethers";
 import { Address } from "@/providers/NostrProvider";
 import { truncateAddress } from "@/utils/crypto";
@@ -52,7 +52,7 @@ export default function StatsCards({
   }, [transactions, accountAddress]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Transactions</CardTitle>
@@ -63,7 +63,12 @@ export default function StatsCards({
             {formatNumber(stats.count, 0)}
           </div>
           <p className="text-xs text-muted-foreground">
-            in {timeRangeLabel.toLowerCase()}
+            {timeRangeLabel === "All Time"
+              ? `since ${formatTimestamp(
+                  transactions[transactions.length - 1].timestamp,
+                  "MMM d, yyyy"
+                )}`
+              : `in ${timeRangeLabel.toLowerCase()}`}
           </p>
         </CardContent>
       </Card>
@@ -83,7 +88,12 @@ export default function StatsCards({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                in {timeRangeLabel.toLowerCase()}
+                {timeRangeLabel === "All Time"
+                  ? `since ${formatTimestamp(
+                      transactions[transactions.length - 1].timestamp,
+                      "MMM yyyy"
+                    )}`
+                  : `in ${timeRangeLabel.toLowerCase()}`}
               </p>
             </CardContent>
           </Card>
@@ -101,7 +111,12 @@ export default function StatsCards({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                in {timeRangeLabel.toLowerCase()}
+                {timeRangeLabel === "All Time"
+                  ? `since ${formatTimestamp(
+                      transactions[transactions.length - 1].timestamp,
+                      "MMM yyyy"
+                    )}`
+                  : `in ${timeRangeLabel.toLowerCase()}`}
               </p>
             </CardContent>
           </Card>

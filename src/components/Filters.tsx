@@ -313,7 +313,10 @@ export default function Filters({
                               : "opacity-0"
                           )}
                         />
-                        {token.symbol} ({truncateAddress(token.address)})
+                        {token.symbol}{" "}
+                        <span className="text-muted-foreground text-xs">
+                          ({truncateAddress(token.address)})
+                        </span>
                       </CommandItem>
                     ))}
                   </CommandGroup>

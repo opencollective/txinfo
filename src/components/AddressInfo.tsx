@@ -37,6 +37,7 @@ export default function AddressDetails({
     }
     const fetchENSName = async () => {
       const ensName = await getENSNameFromAddress(address);
+      console.log(">>> fetchENSName", address, ensName);
       setAddressName(ensName || "Unknown address");
     };
     fetchENSName();

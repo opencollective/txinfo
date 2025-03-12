@@ -213,7 +213,10 @@ export function TransactionRow({
               <div className="flex items-center text-sm">
                 <Link
                   href={`/${chain}/tx/${tx.txHash}`}
-                  title={formatTimestamp(tx.timestamp, false)}
+                  title={formatTimestamp(
+                    tx.timestamp,
+                    "MMM d, yyyy 'at' HH:mm:ss zzz"
+                  )}
                   className="text-muted-foreground hover:underline"
                 >
                   {formatTimestamp(tx.timestamp)}
@@ -245,7 +248,10 @@ export function TransactionRow({
               <div className="flex items-center gap-4">
                 <Link
                   href={`/${chain}/tx/${tx.txHash}`}
-                  title={formatTimestamp(tx.timestamp, false)}
+                  title={formatTimestamp(
+                    tx.timestamp,
+                    "MMM d, yyyy 'at' HH:mm:ss zzz"
+                  )}
                   className="text-muted-foreground hover:underline"
                 >
                   {formatTimestamp(tx.timestamp)}
