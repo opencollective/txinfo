@@ -91,7 +91,7 @@ export default function Filters({
         acc.byMonth[month].all++;
         acc.total.all++;
         if (accountAddress) {
-          const type = tx.from === accountAddress.toLowerCase() ? "in" : "out";
+          const type = tx.from === accountAddress.toLowerCase() ? "out" : "in";
           acc.byMonth[month][type]++;
           acc.byType[type] = (acc.byType[type] || 0) + 1;
           acc.total[type] = (acc.total[type] || 0) + 1;
