@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { truncateAddress } from "@/utils/crypto.server";
 import { Address } from "@/types";
+import Image from "next/image";
 
 const FEATURED_ACCOUNTS = [
   {
@@ -24,7 +25,25 @@ export default function Home() {
     <main className="flex min-h-screen flex-col">
       {/* Hero Section */}
       <section className="py-20 px-4 md:px-8 text-center">
-        <h1 className="text-4xl font-bold mb-4">TxInfo.xyz</h1>
+        <div className="flex justify-center items-center">
+          <Image
+            src="/txinfo-light.svg"
+            className="h-48 w-48 mb-4 block dark:hidden"
+            alt="TxInfo Logo"
+            width={96}
+            height={96}
+          />
+          <Image
+            src="/txinfo-dark.svg"
+            className="h-48 w-48 mb-4 hidden dark:block"
+            alt="TxInfo Logo"
+            width={96}
+            height={96}
+          />
+        </div>
+        <h1 className="text-4xl font-bold mb-4">
+          TxInfo<span className="text-muted-foreground text-sm">.xyz</span>
+        </h1>
         <p className="text-xl text-muted-foreground mb-8">
           Add metadata to any blockchain transaction using Nostr
         </p>

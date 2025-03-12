@@ -15,8 +15,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TxInfo",
-  description: "Human readable transaction information and other metadata",
+  title: "TxInfo - Add metadata to any blockchain transaction",
+  description: "Add metadata to any blockchain transaction using Nostr",
+  openGraph: {
+    title: "TxInfo - Add metadata to any blockchain transaction",
+    description: "Add metadata to any blockchain transaction using Nostr",
+    url: "https://txinfo.xyz",
+    siteName: "TxInfo",
+    images: [
+      {
+        url: "https://txinfo.xyz/txinfo-light.png", // 1200x630px recommended
+        width: 1200,
+        height: 630,
+        alt: "TxInfo - Add metadata to any blockchain transaction",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TxInfo - Add metadata to any blockchain transaction",
+    description: "Add metadata to any blockchain transaction using Nostr",
+    creator: "@xdamman",
+    images: ["https://txinfo.xyz/txinfo-light.png"],
+  },
 };
 
 export default function RootLayout({
