@@ -73,3 +73,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+code {
+  @apply bg-muted-foreground/20 border-muted-foreground/10 border-2 text-foreground rounded-sm p-1 m-1 text-xs font-mono;
+}
+
+a {
+  @apply text-primary;
+}

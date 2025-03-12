@@ -33,51 +33,38 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Why Section */}
-      <section className="py-6 md:py-16 px-4 md:px-8 bg-muted/30 rounded-lg">
+      {/* How to use Section */}
+      <section className="py-4 md:py-8 px-4 md:px-8 bg-muted/30 rounded-lg">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-semibold mb-4">Why TxInfo?</h2>
+          <h2 className="text-2xl font-semibold mb-4">How to use?</h2>
           <p className="text-muted-foreground mb-8 leading-relaxed">
-            Blockchain transactions are cryptic by nature - just addresses and
-            amounts. But behind each transaction is a human story: a donation to
-            a cause, a payment for services, or a gift to a friend. TxInfo lets
-            you add this missing context, making blockchain data more meaningful
-            and accessible to everyone. Built on Nostr, it&apos;s decentralized,
-            censorship-resistant, and always available.
+            Just append <code>/:chain/:type/:address</code> to the URL (where
+            type is &quot;address&quot;, &quot;tx&quot;, or &quot;token&quot;;
+            i.e. same pattern as on etherscan).
+          </p>
+          <p className="text-muted-foreground mb-8 leading-relaxed">
+            A new Nostr user will be automatically created and saved in your
+            local storage. If you want to use your own <code>nsec</code>, just
+            enter
+            <code>localStorage.setItem(&quot;nostr_nsec&quot;, nsec)</code> in
+            the console.
+          </p>
+          <p className="text-muted-foreground mb-8 leading-relaxed">
+            Questions? Feedback? Please{" "}
+            <a href="https://github.com/xdamman/txinfo/issues">
+              create an issue on Github
+            </a>{" "}
+            or reach out on{" "}
+            <a href="nostr:npub1xsp9fcq340dzaqjctjl7unu3k0c82jdxc350uqym70k8vedzuvdst562dr">
+              Nostr
+            </a>
+            .
           </p>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-6 md:py-16 px-4 md:px-8 sm:px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="grid gap-6">
-            <Card className="p-6 shadow-none">
-              <h3 className="text-lg font-medium mb-2">🤝 Collaborative</h3>
-              <p className="text-muted-foreground">
-                Anyone can contribute metadata to any transaction or address.
-              </p>
-            </Card>
-
-            <Card className="p-6 shadow-none">
-              <h3 className="text-lg font-medium mb-2">🌐 Decentralized</h3>
-              <p className="text-muted-foreground">
-                No single server, data is distributed across Nostr relays.
-              </p>
-            </Card>
-
-            <Card className="p-6 shadow-none">
-              <h3 className="text-lg font-medium mb-2">🔌 Easy to integrate</h3>
-              <p className="text-muted-foreground">
-                Simple API to post or listen to metadata updates via Nostr.
-              </p>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* Featured Accounts */}
-      <section className="py-6 md:py-16 px-4 md:px-8">
+      <section className="py-4 md:py-8 px-4 md:px-8">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold mb-6">Examples</h2>
           <div className="grid gap-4">
@@ -103,6 +90,49 @@ export default function Home() {
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why Section */}
+      <section className="py-4 md:py-8 px-4 md:px-8 bg-muted/30 rounded-lg">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-semibold mb-4">Why TxInfo?</h2>
+          <p className="text-muted-foreground mb-8 leading-relaxed">
+            Blockchain transactions are cryptic by nature - just addresses and
+            amounts. But behind each transaction is a human story: a donation to
+            a cause, a payment for services, or a gift to a friend. TxInfo lets
+            you add this missing context, making blockchain data more meaningful
+            and accessible to everyone. Built on Nostr, it&apos;s decentralized,
+            censorship-resistant, and always available.
+          </p>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-4 md:py-8 px-4 md:px-8 sm:px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="grid gap-6">
+            <Card className="p-6 shadow-none">
+              <h3 className="text-lg font-medium mb-2">🤝 Collaborative</h3>
+              <p className="text-muted-foreground">
+                Anyone can contribute metadata to any transaction or address.
+              </p>
+            </Card>
+
+            <Card className="p-6 shadow-none">
+              <h3 className="text-lg font-medium mb-2">🌐 Decentralized</h3>
+              <p className="text-muted-foreground">
+                No single server, data is distributed across Nostr relays.
+              </p>
+            </Card>
+
+            <Card className="p-6 shadow-none">
+              <h3 className="text-lg font-medium mb-2">🔌 Easy to integrate</h3>
+              <p className="text-muted-foreground">
+                Simple API to post or listen to metadata updates via Nostr.
+              </p>
+            </Card>
           </div>
         </div>
       </section>
