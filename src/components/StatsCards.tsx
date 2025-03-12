@@ -14,6 +14,7 @@ import type { Transaction } from "@/types/index.d.ts";
 import { useMemo } from "react";
 import type { Token } from "@/types/index.d.ts";
 import { formatNumber } from "@/lib/utils";
+
 export default function StatsCards({
   transactions,
   accountAddress = "0x0000000000000000000000000000000000000000" as Address,

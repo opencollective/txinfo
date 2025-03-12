@@ -4,8 +4,8 @@
     "explorer_url": "https://etherscan.io",
     "explorer_name": "Etherscan",
     "rpc": [
-      "https://eth.drpc.org",
       "https://eth.llamarpc.com",
+      "https://eth.drpc.org",
       "https://rpc.ankr.com/eth",
       "https://rpc.eth.gateway.fm",
       "https://eth.meowrpc.com"

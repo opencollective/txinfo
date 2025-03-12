@@ -11,6 +11,21 @@ export type Token = {
   address: Address;
   decimals?: number;
 };
+
+export type TokenStats = {
+  token: Token;
+  txCount: number;
+  inbound: {
+    count: number;
+    value: number;
+  };
+  outbound: {
+    count: number;
+    value: number;
+  };
+  totalVolume: number;
+  netValue: number;
+};
 export interface Transaction {
   blockNumber: number;
   txHash: TxHash;

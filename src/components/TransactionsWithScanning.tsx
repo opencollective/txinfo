@@ -34,6 +34,7 @@ export default function Transactions({ address, chain }: Props) {
     firstBlock: number;
   }>({ fromBlock: 0, toBlock: 0, lastBlock: 0, firstBlock: 0 });
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
+    type: "all",
     dateRange: {
       start: startOfMonth(new Date()),
       end: endOfMonth(new Date()),
@@ -289,6 +290,8 @@ export default function Transactions({ address, chain }: Props) {
       {/* Filters */}
       <Filters
         availableTokens={availableTokens}
+        transactions={filteredTransactions}
+        accountAddress={address as Address}
         onChange={setTransactionsFilter}
       />
 

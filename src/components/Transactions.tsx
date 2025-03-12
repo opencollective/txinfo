@@ -8,13 +8,14 @@ import React from "react";
 import { TransactionRow } from "@/components/TransactionRow";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { X } from "lucide-react";
-import type { Address, Token } from "@/types";
+import type { Address, TokenStats } from "@/types";
 import type { Transaction } from "@/types/index.d.ts";
 import { URI, useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
 import { useLiveTransactions } from "@/hooks/useLiveTransactions";
 import { formatTimestamp } from "@/lib/utils";
+import { ethers } from "ethers";
 interface Props {
   chain: string;
   tokenAddress?: Address;
@@ -36,6 +37,7 @@ export default function Transactions({
       end: endOfMonth(new Date()),
       label: format(new Date(), "MMMM yyyy"),
     },
+    type: "all",
     selectedTokens: [],
   });
   const { transactions: newTransactions, skippedTransactions } =
@@ -57,7 +59,7 @@ export default function Transactions({
     }
 
     try {
-      const tokenMap: Record<Address, Token> = {};
+      const tokenMap: Record<Address, TokenStats> = {};
       transactions.forEach((tx) => {
         if (
           tx.token?.address &&
@@ -65,15 +67,49 @@ export default function Transactions({
           tx.token?.symbol?.length > 0 &&
           tx.token?.symbol?.length <= 6
         ) {
-          tokenMap[tx.token.address.toLowerCase() as Address] = tx.token;
+          const tokenStats = tokenMap[
+            tx.token.address.toLowerCase() as Address
+          ] || {
+            token: tx.token,
+            txCount: 0,
+            inbound: {
+              count: 0,
+              value: 0,
+            },
+            outbound: {
+              count: 0,
+              value: 0,
+            },
+            totalVolume: 0,
+            netValue: 0,
+          };
+          tokenStats.txCount++;
+          const value = Number(ethers.formatUnits(tx.value, tx.token.decimals));
+          if (tx.from === accountAddress?.toLowerCase()) {
+            tokenStats.outbound.count++;
+            tokenStats.outbound.value += value;
+            tokenStats.netValue -= value;
+          } else if (tx.to === accountAddress?.toLowerCase()) {
+            tokenStats.inbound.count++;
+            tokenStats.inbound.value += value;
+            tokenStats.netValue += value;
+          }
+          tokenStats.totalVolume =
+            tokenStats.inbound.value + tokenStats.outbound.value;
+          tokenMap[tx.token.address.toLowerCase() as Address] = tokenStats;
         }
       });
-      return Object.values(tokenMap);
+      return Object.values(tokenMap)
+        .filter(
+          (tokenStats) =>
+            tokenStats.outbound.count > 0 || tokenStats.inbound.count > 1
+        )
+        .map((tokenStats) => tokenStats.token);
     } catch (error) {
       console.error("Error processing tokens:", error);
       return [];
     }
-  }, [transactions]);
+  }, [transactions, accountAddress]);
 
   // Filter transactions based on both date and tokens
   const filteredTransactions = useMemo(() => {
@@ -106,9 +142,19 @@ export default function Transactions({
             .includes(tx.token.address)
       );
     }
+    console.log(">>> transactionsFilter", transactionsFilter);
+    if (accountAddress && transactionsFilter.type === "in") {
+      filtered = filtered.filter(
+        (tx) => tx.to === accountAddress.toLowerCase()
+      );
+    } else if (accountAddress && transactionsFilter.type === "out") {
+      filtered = filtered.filter(
+        (tx) => tx.from === accountAddress.toLowerCase()
+      );
+    }
 
     return filtered;
-  }, [transactions, transactionsFilter]);
+  }, [transactions, transactionsFilter, accountAddress]);
 
   useMemo(() => {
     // const cachedTransactions = getItem(
@@ -133,7 +179,7 @@ export default function Transactions({
             accountAddress,
             tokenAddress
           );
-
+        console.log(">>> past transactions from etherscan", transactions);
         if (transactions) {
           setTransactions(transactions.slice(0, 100));
         }
@@ -170,6 +216,8 @@ export default function Transactions({
       {/* Filters */}
       <Filters
         availableTokens={availableTokens}
+        transactions={transactions}
+        accountAddress={accountAddress as Address}
         onChange={setTransactionsFilter}
       />
 

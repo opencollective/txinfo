@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import chains from "../chains.json";
 import { ExternalLink, Edit } from "lucide-react";
@@ -9,6 +9,7 @@ import { Tag } from "@/components/ui/tag";
 import { useNostr, type URI, type Address } from "@/providers/NostrProvider";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
+import { getENSNameFromAddress } from "@/utils/crypto.server";
 
 export default function AddressDetails({
   chain,
@@ -21,18 +22,33 @@ export default function AddressDetails({
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
+  const uri = `${chainConfig.id}:address:${address}`.toLowerCase() as URI;
+  subscribeToNotesByURI([uri]);
+  const latestNote = notesByURI[uri as URI]?.[0];
+  const [addressName, setAddressName] = useState(
+    latestNote?.content || "Unknown address"
+  );
+
+  useEffect(() => {
+    const latestNote = notesByURI[uri as URI]?.[0];
+    if (latestNote?.content) {
+      setAddressName(latestNote.content);
+      return;
+    }
+    const fetchENSName = async () => {
+      const ensName = await getENSNameFromAddress(address);
+      setAddressName(ensName || "Unknown address");
+    };
+    fetchENSName();
+  }, [address, addressName, notesByURI, uri]);
 
   if (!chainConfig) {
     return <div>Chain not found</div>;
   }
-  const uri = `${chainConfig.id}:address:${address}`.toLowerCase() as URI;
-  subscribeToNotesByURI([uri]);
 
   const onCancelEditing = () => {
     setIsEditing(false);
   };
-
-  const latestNote = notesByURI[uri as URI]?.[0];
 
   const tags =
     latestNote?.tags.filter((t) => t[0] === "t").map((tag) => `#${tag[1]}`) ||
@@ -55,9 +71,7 @@ export default function AddressDetails({
               </div>
             ) : (
               <div className="group relative flex flex-row items-center">
-                <span className="pr-2">
-                  {latestNote?.content || "Unknown address"}
-                </span>
+                <span className="pr-2">{addressName}</span>
                 {!isEditing && tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 my-2">
                     {tags.map((tag) => (

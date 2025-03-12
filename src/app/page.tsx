@@ -6,20 +6,16 @@ import { Address } from "@/types";
 
 const FEATURED_ACCOUNTS = [
   {
-    name: "Citizen Spring Safe Multisig",
-    uri: "gnosis/address/0x6fDF0AaE33E313d9C98D2Aa19Bcd8EF777912CBf",
+    name: "Vitalik.eth on Ethereum",
+    uri: "ethereum/address/vitalik.eth",
   },
   {
-    name: "Commons Hub Token",
-    uri: "celo/token/0x65dd32834927de9e57e72a3e2130a19f81c6371d",
+    name: "Citizen Wallet Gitcoin EOA on Polygon",
+    uri: "polygon/address/0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
   },
   {
-    name: "Citizen Wallet EOA",
-    uri: "gnosis/address/0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
-  },
-  {
-    name: "Regens Unite Multisig",
-    uri: "gnosis/address/0x371cA2c8f1D02864C7306e5E5Ed5DC6edF2DD19c",
+    name: "Regens Unite Gitcoin on Polygon",
+    uri: "polygon/address/0x08e40e1C0681D072a54Fc5868752c02bb3996FFA",
   },
 ];
 

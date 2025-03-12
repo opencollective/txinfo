@@ -213,6 +213,7 @@ export function TransactionRow({
               <div className="flex items-center text-sm">
                 <Link
                   href={`/${chain}/tx/${tx.txHash}`}
+                  title={formatTimestamp(tx.timestamp, false)}
                   className="text-muted-foreground hover:underline"
                 >
                   {formatTimestamp(tx.timestamp)}
@@ -244,6 +245,7 @@ export function TransactionRow({
               <div className="flex items-center gap-4">
                 <Link
                   href={`/${chain}/tx/${tx.txHash}`}
+                  title={formatTimestamp(tx.timestamp, false)}
                   className="text-muted-foreground hover:underline"
                 >
                   {formatTimestamp(tx.timestamp)}
@@ -257,9 +259,17 @@ export function TransactionRow({
         {/* Amount */}
         <div className="text-right">
           <div className="text-lg font-semibold">
-            {formatNumber(
-              Number(ethers.formatUnits(tx.value, tx.token.decimals))
-            )}{" "}
+            <span
+              title={formatNumber(
+                Number(ethers.formatUnits(tx.value, tx.token.decimals)),
+                2,
+                false
+              )}
+            >
+              {formatNumber(
+                Number(ethers.formatUnits(tx.value, tx.token.decimals))
+              )}{" "}
+            </span>
             <span className="text-sm font-normal text-muted-foreground">
               {tx.token.symbol?.substring(0, 6)}
             </span>

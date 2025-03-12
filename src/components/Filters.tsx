@@ -6,7 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar } from "lucide-react";
+import { Calendar, ArrowLeftRight, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -24,7 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Check, X, Coins } from "lucide-react";
-import type { Token } from "@/types/index.d.ts";
+import type { Address, Token, Transaction } from "@/types/index.d.ts";
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, startOfToday } from "date-fns";
 import { truncateAddress } from "@/utils/crypto";
@@ -38,13 +38,18 @@ type DateRange = {
 export type Filter = {
   dateRange: DateRange;
   selectedTokens: Token[];
+  type: "in" | "out" | "all";
 };
 
 export default function Filters({
   availableTokens,
+  transactions,
   onChange,
+  accountAddress,
 }: {
   availableTokens: Token[];
+  transactions: Transaction[];
+  accountAddress: Address;
   onChange: (filter: Filter) => void;
 }) {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -54,6 +59,7 @@ export default function Filters({
   });
   const [selectedTokens, setSelectedTokens] = useState<Token[]>([]);
   const [tokenSelectOpen, setTokenSelectOpen] = useState(false);
+  const [type, setType] = useState<"in" | "out" | "all">("all");
 
   // Generate list of last 12 months
   const monthOptions = useMemo(() => {
@@ -71,18 +77,50 @@ export default function Filters({
     return options;
   }, []);
 
+  type TransactionStats = {
+    byMonth: Record<string, { all: number; in: number; out: number }>;
+    byType: Record<string, number>;
+    total: { all: number; in: number; out: number };
+  };
+
+  const transactionStats = useMemo(() => {
+    return transactions.reduce(
+      (acc, tx) => {
+        const month = format(tx.timestamp * 1000, "MMMM yyyy");
+        const type = tx.from === accountAddress.toLowerCase() ? "in" : "out";
+        acc.byMonth[month] = acc.byMonth[month] || { all: 0, in: 0, out: 0 };
+        acc.byMonth[month][type]++;
+        acc.byMonth[month].all++;
+        acc.byType[type] = (acc.byType[type] || 0) + 1;
+        acc.total[type] = (acc.total[type] || 0) + 1;
+        acc.total.all++;
+        return acc;
+      },
+      {
+        byMonth: {},
+        byType: { in: 0, out: 0 },
+        total: { all: 0, in: 0, out: 0 },
+      } as TransactionStats
+    );
+  }, [transactions, accountAddress]);
+
+  const updateType = (type: "in" | "out" | "all") => {
+    setType(type);
+    onChange({ dateRange, selectedTokens, type });
+  };
+
   const updateDateRange = (dateRange: {
     start: Date | null;
     end: Date | null;
     label: string;
   }) => {
     setDateRange(dateRange);
-    onChange({ dateRange, selectedTokens });
+    onChange({ dateRange, selectedTokens, type });
   };
 
   const updateSelectedTokens = (selectedTokens: Token[]) => {
     setSelectedTokens(selectedTokens);
-    onChange({ dateRange, selectedTokens });
+    onChange({ dateRange, selectedTokens, type });
   };
 
   return (
@@ -125,10 +163,101 @@ export default function Filters({
             <DropdownMenuItem
               key={option.label}
               onClick={() => updateDateRange(option)}
+              className="flex justify-between"
             >
-              {option.label}
+              <span
+                className={
+                  transactionStats.byMonth[option.label]?.all > 0
+                    ? ""
+                    : "text-muted-foreground"
+                }
+              >
+                {option.label}
+              </span>
+              <span className="text-muted-foreground">
+                {transactionStats.byMonth[option.label]?.all || 0}
+              </span>
             </DropdownMenuItem>
           ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Type Filter */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-[140px] flex-row justify-start"
+          >
+            {type === "all" ? (
+              <div className="flex justify-between w-full items-center">
+                <div className="flex flex-row items-center gap-2">
+                  <ArrowLeftRight className="mr-1 h-4 w-4" />
+                  All
+                </div>
+                <span className="text-muted-foreground">
+                  {dateRange.label === "All Time"
+                    ? transactionStats.total.all
+                    : transactionStats.byMonth[dateRange.label].all}
+                </span>
+              </div>
+            ) : type === "in" ? (
+              <div className="flex justify-between w-full items-center">
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                Inbound
+                <span className="text-muted-foreground">
+                  {dateRange.label === "All Time"
+                    ? transactionStats.total.in
+                    : transactionStats.byMonth[dateRange.label].in}
+                </span>
+              </div>
+            ) : (
+              <div className="flex justify-between w-full items-center">
+                <ArrowRight className="mr-1 h-4 w-4" />
+                Outbound
+                <span className="text-muted-foreground ml-2">
+                  {dateRange.label === "All Time"
+                    ? transactionStats.total.out
+                    : transactionStats.byMonth[dateRange.label].out}
+                </span>
+              </div>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-[120px]">
+          <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setType("all")}
+            className="flex justify-between"
+          >
+            All
+            <span className="text-muted-foreground">
+              {transactionStats.total.all}
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => updateType("in")}
+            className="flex justify-between"
+          >
+            Inbound
+            <span className="text-muted-foreground">
+              {dateRange.label === "All Time"
+                ? transactionStats.total.in
+                : transactionStats.byMonth[dateRange.label]?.in || 0}
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => updateType("out")}
+            className="flex justify-between"
+          >
+            Outbound
+            <span className="text-muted-foreground">
+              {dateRange.label === "All Time"
+                ? transactionStats.total.out
+                : transactionStats.byMonth[dateRange.label]?.out || 0}
+            </span>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

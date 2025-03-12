@@ -1,6 +1,6 @@
 "use client";
 
-import { ethers, Log } from "ethers";
+import { ethers, Log, JsonRpcProvider } from "ethers";
 import ERC20_ABI from "../erc20.abi.json";
 import chains from "../chains.json";
 import { useState, useEffect, useRef } from "react";
@@ -30,7 +30,7 @@ export const truncateAddress = crypto.truncateAddress;
 export const getBlockTimestamp = async (
   chain: string,
   blockNumber: number,
-  provider: ethers.JsonRpcProvider
+  provider: JsonRpcProvider
 ) => {
   const key = `${chain}:${blockNumber}`;
   const cached = localStorage.getItem(key);
@@ -49,7 +49,7 @@ export const getBlockTimestamp = async (
 export async function getTokenDetails(
   chain: string,
   contractAddress: string,
-  provider: ethers.JsonRpcProvider
+  provider: JsonRpcProvider
 ) {
   try {
     // Check cache first
@@ -126,7 +126,7 @@ export function useTxDetails(chain: string, txHash: string) {
   if (!chainConfig) {
     throw new Error(`Chain not found: ${chain}`);
   }
-  const provider = useRef(new ethers.JsonRpcProvider(chainConfig.rpc[0]));
+  const provider = useRef(new JsonRpcProvider(chainConfig.rpc[0]));
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -151,10 +151,7 @@ export function useTxDetails(chain: string, txHash: string) {
   return [txDetails, isLoading, error] as const;
 }
 
-export async function getTxDetails(
-  tx_hash: string,
-  provider: ethers.JsonRpcProvider
-) {
+export async function getTxDetails(tx_hash: string, provider: JsonRpcProvider) {
   const tx = await provider.getTransaction(tx_hash);
   if (!tx?.to) return null;
 
@@ -247,7 +244,7 @@ export async function processBlockRange(
   address: string,
   fromBlock: number,
   toBlock: number,
-  provider: ethers.JsonRpcProvider
+  provider: JsonRpcProvider
 ): Promise<Transaction[]> {
   const key = `${chain}:${address}[${fromBlock}:${toBlock}]`.toLowerCase();
   const cached = localStorage.getItem(key);
@@ -297,7 +294,7 @@ export async function getBlockRange(
   accountAddress: string,
   fromBlock: number,
   toBlock: number,
-  provider: ethers.JsonRpcProvider
+  provider: JsonRpcProvider
 ): Promise<Transaction[]> {
   const key =
     `${chain}:${accountAddress}[${fromBlock}-${toBlock}]`.toLowerCase();
@@ -388,7 +385,7 @@ export async function getBlockRange(
 export async function getTxFromLog(
   chain: string,
   log: Log,
-  provider: ethers.JsonRpcProvider
+  provider: JsonRpcProvider
 ): Promise<Transaction> {
   const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
   const parsedLog = contract.interface.parseLog(log);
@@ -414,7 +411,7 @@ export async function getTxFromLog(
 export async function isEOA(
   chain: string,
   address: string,
-  provider: ethers.JsonRpcProvider
+  provider: JsonRpcProvider
 ) {
   const key = `${chain}:${address}:eoa`;
   const cached = localStorage.getItem(key);
@@ -550,7 +547,7 @@ export function useTokenDetails(chain: string, contractAddress: string) {
           throw new Error(`Chain not found: ${chain}`);
         }
 
-        const provider = new ethers.JsonRpcProvider(chainConfig.rpc[0]);
+        const provider = new JsonRpcProvider(chainConfig.rpc[0]);
         const tokenDetails = await getTokenDetails(
           chain,
           contractAddress,
