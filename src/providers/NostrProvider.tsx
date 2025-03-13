@@ -93,9 +93,9 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     {}
   ); // Stores kind 1111 events
   const [profiles, setProfiles] = useState<Record<string, NostrProfile>>({});
-  const subRef = useRef<RelaySubscription | undefined>(null);
+  const subRef = useRef<RelaySubscription[]>([]);
   const profilesSubscriptionsRef = useRef<RelaySubscription | undefined>(null);
-  const subscribedURIs = useRef<URI[]>([]);
+  const subscribedURIs = useRef<Record<URI, number>>({});
   const subscribedProfiles = useRef<string[]>([]);
 
   useEffect(() => {
@@ -129,7 +129,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
           // Add WebSocket options
           connectionTimeout: 3000, // 3 seconds timeout
         });
-        console.log(`Connected to ${url}`);
+        console.log(`>>> NostrProvider connected to ${url}`);
         setConnectedRelays((prev) => [...prev, url]);
       } catch (err) {
         console.warn(`Failed to connect to ${url}:`, err);
@@ -191,6 +191,10 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (newPubkeys.length === 0) return;
+      console.log(
+        ">>> NostrProvider subscribeToProfiles: newPubkeys",
+        newPubkeys
+      );
 
       // Subscribing to new URIs
       subscribedProfiles.current = [
@@ -215,40 +219,25 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     [pool]
   );
 
-  // Subscribe to kind 1111 notes with #i tags
-  const subscribeToNotesByURI = useCallback(
-    async (URIs: URI[]) => {
-      if (URIs.length === 0) return;
+  // Get a number between 0 and 20 based on the uri
+  const getSubscriptionGroup = (uri: URI) => {
+    // Use the last 2 characters of the hash for better distribution
+    const hash = uri.split(":").pop() || "";
+    const lastTwoChars = hash.slice(-2);
+    return parseInt(lastTwoChars, 16) % 20;
+  };
 
-      // Close any existing subscription before starting a new one
-      if (subRef.current) {
-        subRef.current.close();
-      }
-
-      const cachedEvents = await db?.getNostrEventsByURIs(URIs);
-      console.log(
-        ">>> NostrProvider subscribeToNotesByURI: cachedEvents",
-        cachedEvents
-      );
-      addNostrEventsToState(cachedEvents);
-
-      const newURIs = URIs.filter(
-        (uri) => !subscribedURIs.current.some((u) => u === uri.toLowerCase())
-      );
-
-      if (newURIs.length === 0) return;
-
-      subscribedURIs.current = [
-        ...subscribedURIs.current,
-        ...newURIs.map((u) => u.toLowerCase() as URI),
-      ];
-
+  const createNewSubscription = useCallback(
+    (uris: URI[], groupIndex: number) => {
       const filter = {
         kinds: [1111], // Listen for kind 1111 notes
-        "#I": subscribedURIs.current, // Subscribe to multiple #i tags
+        "#I": uris, // Subscribe to multiple #i tags
       };
 
-      subRef.current = pool?.subscribeMany(relays, [filter], {
+      if (subRef.current[groupIndex]) {
+        subRef.current[groupIndex].close();
+      }
+      subRef.current[groupIndex] = pool?.subscribeMany(relays, [filter], {
         onevent: (event) => {
           // cache event in indexedDB
           const uri = getURIFromNostrEvent(event);
@@ -257,9 +246,39 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
           addNostrEventsToState([event]);
           db?.addNostrEvent(uri, event);
         },
-      });
+      }) as RelaySubscription;
     },
     [pool, addNostrEventsToState]
+  );
+
+  // Subscribe to kind 1111 notes with #i tags
+  const subscribeToNotesByURI = useCallback(
+    async (URIs: URI[]) => {
+      if (URIs.length === 0) return;
+
+      const newURIs: URI[] = [];
+      const subscriptionGroupsToUpdate: Set<number> = new Set();
+      URIs.forEach((u) => {
+        const uri = u.toLowerCase() as URI;
+        if (!subscribedURIs.current[uri]) {
+          newURIs.push(uri);
+          subscribedURIs.current[uri] = getSubscriptionGroup(uri);
+          subscriptionGroupsToUpdate.add(subscribedURIs.current[uri]);
+        }
+      });
+      if (newURIs.length === 0) return;
+
+      const cachedEvents = await db?.getNostrEventsByURIs(newURIs);
+      addNostrEventsToState(cachedEvents);
+
+      Array.from(subscriptionGroupsToUpdate).forEach((groupIndex) => {
+        const groupURIs = Object.keys(subscribedURIs.current).filter(
+          (uri: string) => subscribedURIs.current[uri as URI] === groupIndex
+        );
+        createNewSubscription(groupURIs as URI[], groupIndex);
+      });
+    },
+    [addNostrEventsToState, createNewSubscription]
   );
 
   const publishNote = useCallback(
