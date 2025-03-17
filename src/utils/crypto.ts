@@ -20,10 +20,13 @@ const localStorage =
     ? window.localStorage
     : {
         getItem: (key: string) => {
-          return cache[key];
+          return cache[key as keyof typeof cache];
         },
         setItem: (key: string, value: string) => {
-          cache[key] = value;
+          (cache as Record<string, string>)[key] = value;
+        },
+        removeItem: (key: string) => {
+          delete (cache as Record<string, string>)[key];
         },
       };
 
@@ -159,7 +162,7 @@ export async function getAddressType(
   const key = `${chain}:${address}:type`;
   const cached = localStorage.getItem(key);
   if (cached) {
-    return cached;
+    return cached as "eoa" | "contract" | "token";
   }
   const code = await provider.getCode(address);
   let res: "eoa" | "contract" | "token" | undefined;
