@@ -44,10 +44,14 @@ export const formatNumber = (
   );
 };
 
-export const formatTimestamp = (ts: number, format = "MMM d HH:mm") => {
+export function formatTimestamp(ts: number, format = "MMM d HH:mm"): string {
+  if (!ts) {
+    console.error("formatTimestamp: ts is undefined");
+    return "";
+  }
   return formatInTimeZone(
     ts * 1000,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     format // "MMM d, yyyy 'at' HH:mm:ss zzz"
   );
-};
+}
