@@ -59,7 +59,6 @@ export async function GET(req: Request) {
   }
 
   const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
-
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {

@@ -53,19 +53,20 @@ export default function Home() {
       </section>
 
       {/* How to use Section */}
-      <section className="py-4 md:py-8 px-4 md:px-8 bg-muted/30 rounded-lg">
+      <section className="py-4 md:py-8 px-4 md:px-8 rounded-lg">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold mb-4">How to use?</h2>
           <p className="text-muted-foreground mb-8 leading-relaxed">
             Just append <code>/:chain/:type/:address</code> to the txinfo.xyz
             URL (where type is &quot;address&quot;, &quot;tx&quot;, or
             &quot;token&quot;; i.e. same pattern as on etherscan).
-            <div className="text-sm sm:text-base">
+            <br />
+            <span className="text-sm sm:text-base">
               E.g.{" "}
               <Link href="https://txinfo.xyz/ethereum/address/uniswap.eth">
                 txinfo.xyz/ethereum/address/uniswap.eth
               </Link>
-            </div>
+            </span>
           </p>
           <p className="text-muted-foreground mb-8 leading-relaxed">
             A new Nostr user will be automatically created and saved in your
@@ -80,7 +81,7 @@ export default function Home() {
             </a>
             .
           </p>
-          <div className="text-xs sm:text-sm rounded-md bg-muted/50 p-2">
+          <div className="text-xs sm:text-sm rounded-md bg-muted p-2">
             ℹ️ Protip: if you want to use your own <code>nsec</code>, just enter
             in the console:
             <div className="py-2">

@@ -14,18 +14,18 @@ import type {
 import * as crypto from "./crypto.server";
 export const truncateAddress = crypto.truncateAddress;
 
-// const cache = {};
-// const localStorage =
-//   typeof window !== "undefined"
-//     ? window.localStorage
-//     : {
-//         getItem: (key: string) => {
-//           return cache[key];
-//         },
-//         setItem: (key: string, value: string) => {
-//           cache[key] = value;
-//         },
-//       };
+const cache = {};
+const localStorage =
+  typeof window !== "undefined"
+    ? window.localStorage
+    : {
+        getItem: (key: string) => {
+          return cache[key];
+        },
+        setItem: (key: string, value: string) => {
+          cache[key] = value;
+        },
+      };
 
 export const getBlockTimestamp = async (
   chain: string,
@@ -149,6 +149,70 @@ export function useTxDetails(chain: string, txHash: string) {
   }, [chain, txHash]);
 
   return [txDetails, isLoading, error] as const;
+}
+
+export async function getAddressType(
+  chain: string,
+  address: string,
+  provider: JsonRpcProvider
+): Promise<"eoa" | "contract" | "token" | undefined> {
+  const key = `${chain}:${address}:type`;
+  const cached = localStorage.getItem(key);
+  if (cached) {
+    return cached;
+  }
+  const code = await provider.getCode(address);
+  let res: "eoa" | "contract" | "token" | undefined;
+  if (code === "0x") {
+    console.log(`${address} is an EOA (Externally Owned Account).`);
+    res = "eoa";
+  } else {
+    console.log(`${address} is a Smart Contract.`);
+    console.log(">>> code", code);
+
+    // Proxy-related signatures and patterns
+    const proxySlotSig =
+      "360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"; // ERC-1967 implementation slot
+
+    // Check if it's a proxy
+    const isProxy = code.includes(proxySlotSig);
+
+    if (isProxy) {
+      console.log(">>> isProxy", address);
+      // For proxies, we should check the implementation contract
+      try {
+        const contract = new ethers.Contract(address, ERC20_ABI, provider);
+        await Promise.all([
+          contract.name(),
+          contract.symbol(),
+          contract.decimals(),
+        ]);
+        res = "token"; // If ERC20 calls succeed, it's a token proxy
+      } catch {
+        console.log(">>> isERC20Proxy", address, "failed");
+        res = "contract"; // If ERC20 calls fail, it's some other kind of proxy
+      }
+    } else {
+      // Common ERC20 function signatures
+      const transferSig = "a9059cbb"; // transfer(address,uint256)
+      const balanceOfSig = "70a08231"; // balanceOf(address)
+      const totalSupplySig = "18160ddd"; // totalSupply()
+
+      // Check if the bytecode contains these signatures
+      const hasTransfer = code.includes(transferSig);
+      const hasBalanceOf = code.includes(balanceOfSig);
+      const hasTotalSupply = code.includes(totalSupplySig);
+
+      // If it has at least these core ERC20 functions, it's likely a token
+      if (hasTransfer && hasBalanceOf && hasTotalSupply) {
+        res = "token";
+      } else {
+        res = "contract";
+      }
+    }
+  }
+  localStorage.setItem(key, res);
+  return res;
 }
 
 export async function getTxDetails(tx_hash: string, provider: JsonRpcProvider) {
@@ -408,29 +472,6 @@ export async function getTxFromLog(
   return tx;
 }
 
-export async function isEOA(
-  chain: string,
-  address: string,
-  provider: JsonRpcProvider
-) {
-  const key = `${chain}:${address}:eoa`;
-  const cached = localStorage.getItem(key);
-  if (cached) {
-    return cached === "1";
-  }
-  const code = await provider.getCode(address);
-
-  if (code === "0x") {
-    console.log(`${address} is an EOA (Externally Owned Account).`);
-    localStorage.setItem(key, "1");
-    return true;
-  } else {
-    console.log(`${address} is a Smart Contract.`);
-    localStorage.setItem(key, "0");
-    return false;
-  }
-}
-
 /**
  * Get the first and last block for an address
  * @param chain - The chain to get the block range for
@@ -485,7 +526,19 @@ export async function getTransactionsFromEtherscan(
 
   // Add optional filters
   if (address) {
-    params.set("address", address);
+    const provider = new JsonRpcProvider(
+      chains[chain as keyof typeof chains].rpc[0]
+    );
+    const addressType = await getAddressType(chain, address, provider);
+    switch (addressType) {
+      case "eoa":
+      case "contract":
+        params.set("address", address);
+        break;
+      case "token":
+        params.set("contractaddress", address);
+        break;
+    }
   }
   if (tokenAddress) {
     params.set("contractaddress", tokenAddress);
