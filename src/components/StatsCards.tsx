@@ -65,7 +65,7 @@ export default function StatsCards({
           <p className="text-xs text-muted-foreground">
             {timeRangeLabel === "All Time"
               ? `since ${formatTimestamp(
-                  transactions[transactions.length - 1].timestamp,
+                  transactions[transactions.length - 1]?.timestamp,
                   "MMM d, yyyy"
                 )}`
               : `in ${timeRangeLabel.toLowerCase()}`}

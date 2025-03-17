@@ -62,10 +62,6 @@ export function TransactionRow({
   });
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
 
-  const uri = `${chainId}:tx:${tx.txHash}` as URI;
-
-  const lastNote = notesByURI[uri] && notesByURI[uri][0];
-
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
     if (isEditing) {
@@ -74,6 +70,14 @@ export function TransactionRow({
       }, 0);
     }
   }, [isEditing]);
+
+  if (!tx) {
+    console.error("TransactionRow: tx is undefined");
+    return null;
+  }
+
+  const uri = `${chainId}:tx:${tx.txHash}` as URI;
+  const lastNote = notesByURI[uri] && notesByURI[uri][0];
 
   const getDicebearUrl = (address: string) => {
     return `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`;
