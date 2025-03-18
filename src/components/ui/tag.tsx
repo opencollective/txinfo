@@ -17,16 +17,15 @@ function stringToColor(str: string): string {
 }
 
 export function Tag({ className, value, ...props }: TagProps) {
-  const [kind, val] = value.split(":");
+  const [match, kind, val] = value.match(/^([a-z]+):(.*)$/) || [];
 
-  if (!val) {
+  if (!match) {
     return <SimpleTag value={value} className={className} {...props} />;
   }
 
   if (kind === "t") {
     return <SimpleTag value={val} className={className} {...props} />;
   }
-
   return <ComboTag kind={kind} value={val} className={className} {...props} />;
 }
 
@@ -54,6 +53,7 @@ function ComboTag({
   className,
   ...props
 }: TagProps & { kind: string }) {
+  if (!kind || !value) return null;
   // Generate colors based on the kind and value
   const kindColor = stringToColor(kind);
 
@@ -71,6 +71,30 @@ function ComboTag({
   } else {
     valueColor = stringToColor(value);
   }
+
+  if (kind === "picture") {
+    return (
+      <div
+        className="flex flex-col items-center gap-0 rounded-md overflow-hidden ring-1 ring-inset ring-muted-foreground/20"
+        style={{
+          backgroundColor: kindColor,
+          color: "black",
+        }}
+      >
+        <div className="w-full text-center px-2 py-1">{kind}</div>
+        <div
+          className={cn(
+            "max-w-24 inline-flex items-center rounded-md text-xs font-medium",
+            className
+          )}
+          {...props}
+        >
+          <img src={value} alt={value} />
+        </div>{" "}
+      </div>
+    );
+  }
+
   return (
     <span
       className={cn(

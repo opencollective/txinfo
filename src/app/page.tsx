@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { truncateAddress } from "@/utils/crypto.server";
 import { Address } from "@/types";
 import Image from "next/image";
+import LatestNotes from "@/components/LatestNotes";
+import { Suspense } from "react";
 
 const FEATURED_ACCOUNTS = [
   {
@@ -166,6 +168,19 @@ export default function Home() {
               </p>
             </Card>
           </div>
+        </div>
+      </section>
+
+      {/* Latest Notes */}
+      <section className="py-4 md:py-8 px-4 md:px-8 bg-muted/30 rounded-lg">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-2xl font-semibold mb-4">
+            Latest metadata submitted
+          </h2>
+
+          <Suspense fallback={<div>Loading latest metadata published...</div>}>
+            <LatestNotes />
+          </Suspense>
         </div>
       </section>
 

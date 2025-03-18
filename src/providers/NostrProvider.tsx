@@ -41,12 +41,26 @@ export type NostrProfile = {
   website: string;
 };
 
+type BlockchainKind =
+  | "bitcoin:tx"
+  | "bitcoin:address"
+  | "ethereum:tx"
+  | "ethereum:address";
+
 interface NostrContextType {
   pool: SimplePool | null;
   connectedRelays: string[];
   profiles: Record<string, NostrProfile>;
   notesByURI: Record<URI, NostrNote[]>;
+  latestNotes: NostrNote[];
   subscribeToNotesByURI: (URIs: URI[]) => void;
+  subscribeToLatestNotes: ({
+    kinds,
+    limit,
+  }: {
+    kinds: BlockchainKind[];
+    limit?: number;
+  }) => void;
   subscribeToProfiles: (pubkeys: string[]) => void;
   updateProfile: ({
     name,
@@ -116,6 +130,9 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     {}
   ); // Stores kind 1111 events
   const [profiles, setProfiles] = useState<Record<string, NostrProfile>>({});
+  const latestNotesSubscriptionRef = useRef<RelaySubscription>(null);
+  const notesById = useRef<Record<string, NostrEvent>>({});
+  const [latestNotes, setLatestNotes] = useState<NostrEvent[]>([]);
   const subRef = useRef<RelaySubscription[]>([]);
   const profilesSubscriptionsRef = useRef<RelaySubscription | undefined>(null);
   const subscribedURIs = useRef<Record<URI, number>>({});
@@ -174,6 +191,16 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
   const addNostrEventsToState = useCallback((events: NostrEvent[]) => {
     if (!events || events.length === 0) return;
+
+    setLatestNotes((prev) => {
+      let next = prev;
+      events.forEach((event) => {
+        if (notesById.current[event.id]) return;
+        notesById.current[event.id] = event;
+        next = insertEventIntoDescendingList(next, event);
+      });
+      return next;
+    });
 
     setNotesByURI((prev) => {
       let hasNewEvents = false;
@@ -250,7 +277,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     (uris: URI[], groupIndex: number) => {
       const filter = {
         kinds: [1111], // Listen for kind 1111 notes
-        "#I": uris, // Subscribe to multiple #i tags
+        "#i": uris, // Subscribe to multiple #i tags
       };
 
       if (subRef.current[groupIndex]) {
@@ -266,6 +293,30 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
           db?.addNostrEvent(uri, event);
         },
       }) as RelaySubscription;
+    },
+    [pool, addNostrEventsToState]
+  );
+
+  const subscribeToLatestNotes = useCallback(
+    ({ kinds, limit }: { kinds: BlockchainKind[]; limit?: number }) => {
+      const filter = {
+        kinds: [1111], // Listen for kind 1111 notes
+        "#k": kinds,
+        limit,
+      };
+      latestNotesSubscriptionRef.current = pool?.subscribeMany(
+        relays,
+        [filter],
+        {
+          onevent: (event) => {
+            const uri = getURIFromNostrEvent(event);
+            console.log(">>> NostrProvider event received:", uri, event);
+            if (!uri) return;
+            addNostrEventsToState([event]);
+          },
+        }
+      ) as RelaySubscription;
+      return latestNotesSubscriptionRef.current;
     },
     [pool, addNostrEventsToState]
   );
@@ -383,7 +434,9 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       pool,
       connectedRelays,
       notesByURI,
+      latestNotes,
       subscribeToNotesByURI,
+      subscribeToLatestNotes,
       subscribeToProfiles,
       profiles,
       updateProfile,
@@ -393,7 +446,9 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       pool,
       connectedRelays,
       notesByURI,
+      latestNotes,
       subscribeToNotesByURI,
+      subscribeToLatestNotes,
       subscribeToProfiles,
       profiles,
       updateProfile,
@@ -403,23 +458,24 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
   // Upgrade old events (deprecated)
   useEffect(() => {
+    if (connectedRelays.length === 0) return;
     const nsec = getItem("nostr_nsec") as string;
     db?.getNostrEvents().then((events) => {
-      console.log(
-        ">>> NostrProvider events",
-        events.filter((e) => getURIFromNostrEvent(e)?.startsWith("ethereum:"))
-          .length,
-        "starts with ethereum out of",
-        events.length,
-        events
+      const oldEvents = events.filter(
+        (e) => !getURIFromNostrEvent(e)?.startsWith("ethereum:")
       );
-      events.slice(0, 20).forEach(async (event) => {
+      if (oldEvents.length === 0) return;
+      console.log(
+        ">>>",
+        oldEvents.length,
+        "notes need to be upgraded to the new format",
+        oldEvents
+      );
+      oldEvents.slice(0, 20).forEach(async (event) => {
         const uri = getURIFromNostrEvent(event);
         if (!uri) return;
         if (uri.match(/^[0-9]+:/)) {
           const newEvent = convertOldNostrEvent(event);
-          console.log(">>> waiting 3 seconds to connect to pool");
-          await new Promise((resolve) => setTimeout(resolve, 3000));
           try {
             const signedEvent = await publishEvent(newEvent, nsec);
             if (signedEvent.id) {
@@ -433,7 +489,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         }
       });
     });
-  }, [publishEvent]);
+  }, [publishEvent, connectedRelays.length]);
 
   return (
     <NostrContext.Provider value={contextValue}>
@@ -496,7 +552,9 @@ export const useNostr = () => {
     profiles: context.profiles,
     publishMetadata: context.publishMetadata,
     notesByURI: context.notesByURI,
+    latestNotes: context.latestNotes,
     subscribeToNotesByURI: context.subscribeToNotesByURI,
+    subscribeToLatestNotes: context.subscribeToLatestNotes,
     subscribeToProfiles: context.subscribeToProfiles,
   };
 };

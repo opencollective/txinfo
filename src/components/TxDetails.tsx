@@ -6,15 +6,17 @@ import CopyableValue from "./CopyableValue";
 import { useTxDetails } from "@/utils/crypto";
 import type { URI, ChainConfig } from "@/types";
 import chains from "@/chains.json";
+import { decomposeURI } from "@/lib/utils";
+import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
-  const parts = uri.split(":");
-  const chainId = Number(parts[0]);
-  const tx_hash = parts[2];
+  const { chainId, txHash } = decomposeURI(uri);
   const chainConfig: ChainConfig | undefined = Object.values(chains).find(
     (c) => c.id === chainId
   ) as ChainConfig;
-  const [txDetails, isLoading] = useTxDetails(chain, tx_hash);
+  const [txDetails, isLoading] = useTxDetails(chain, txHash);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   console.log("txDetails", txDetails);
 
@@ -33,7 +35,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
         <CardTitle className="flex items-center justify-between">
           <span>Transaction Details</span>
           <a
-            href={`${chainConfig?.explorer_url}/tx/${tx_hash}`}
+            href={`${chainConfig?.explorer_url}/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
@@ -47,7 +49,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <div className="text-sm font-medium">Transaction Hash</div>
-          <CopyableValue value={tx_hash} />
+          <CopyableValue value={txHash ?? ""} />
         </div>
 
         <div className="space-y-2">
@@ -72,31 +74,50 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
 
         {txDetails.events && txDetails.events.length > 0 && (
           <div className="space-y-3">
-            <div className="text-sm font-medium">Events</div>
-            <div className="space-y-3">
-              {txDetails.events.map((event, index) => (
-                <div key={index} className="p-4 rounded-lg border bg-muted/50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge>{event.name}</Badge>
-                    <CopyableValue
-                      value={event.address}
-                      truncate
-                      className="text-xs text-muted-foreground"
-                    />
-                  </div>
-                  <div className="grid gap-1">
-                    {Object.entries(event.args).map(([key, value]) => (
-                      <div key={key} className="flex flex-row">
-                        <div className="text-muted-foreground truncate mr-2">
-                          {key}:
-                        </div>
-                        <div className="font-mono">{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div
+              className="text-sm font-medium cursor-pointer"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              Events
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4 ml-2 inline" />
+              ) : (
+                <ChevronDown className="h-4 w-4 ml-2 inline" />
+              )}
             </div>
+            {isExpanded && (
+              <div className="space-y-3">
+                {txDetails.events.map((event, index) => {
+                  return (
+                    <div
+                      key={index}
+                      className="p-4 rounded-lg border bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2 mb-2 cursor-pointer">
+                        <div className="flex-1 flex items-center gap-2">
+                          <Badge>{event.name}</Badge>
+                          <CopyableValue
+                            value={event.address}
+                            truncate
+                            className="text-xs text-muted-foreground"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-1">
+                        {Object.entries(event.args).map(([key, value]) => (
+                          <div key={key} className="flex flex-row">
+                            <div className="text-muted-foreground truncate mr-2">
+                              {key}:
+                            </div>
+                            <div className="font-mono">{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </CardContent>

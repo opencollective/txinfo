@@ -24,7 +24,11 @@ export default async function Page({
   return (
     <div className="app">
       <div className="flex flex-col gap-4">
-        <AddressInfo chain={chain} address={tokenAddress as Address} />
+        <AddressInfo
+          chain={chain}
+          address={tokenAddress as Address}
+          addressType="token"
+        />
         <Transactions
           chain={chain}
           tokenAddress={tokenAddress as Address}

@@ -61,22 +61,6 @@ export default function Filters({
   const [tokenSelectOpen, setTokenSelectOpen] = useState(false);
   const [type, setType] = useState<"in" | "out" | "all">("all");
 
-  // Generate list of last 12 months
-  const monthOptions = useMemo(() => {
-    const options = [];
-    const today = new Date();
-
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      options.push({
-        start: startOfMonth(date),
-        end: endOfMonth(date),
-        label: format(date, "MMMM yyyy"),
-      });
-    }
-    return options;
-  }, []);
-
   type TransactionStats = {
     byMonth: Record<string, { all: number; in: number; out: number }>;
     byType: Record<string, number>;
@@ -105,6 +89,54 @@ export default function Filters({
       } as TransactionStats
     );
   }, [transactions, accountAddress]);
+
+  // Generate list of all the months since first transaction
+  const monthOptions = useMemo(() => {
+    const options: Array<{
+      start: Date;
+      end: Date;
+      label: string;
+      txCount: number;
+    }> = [];
+
+    if (transactions.length === 0) return options;
+
+    // Find earliest and latest transaction dates
+    let firstTx = transactions[0].timestamp;
+    let lastTx = transactions[0].timestamp;
+    transactions.forEach((tx) => {
+      firstTx = Math.min(firstTx, tx.timestamp);
+      lastTx = Math.max(lastTx, tx.timestamp);
+    });
+
+    // Generate options for each month between first and last transaction
+    let currentDate = startOfMonth(new Date(firstTx * 1000));
+    const finalMonth = endOfMonth(new Date(lastTx * 1000));
+
+    while (currentDate <= finalMonth) {
+      const monthLabel = format(currentDate, "MMMM yyyy");
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      options.push({
+        start: monthStart,
+        end: monthEnd,
+        label: monthLabel,
+        txCount: transactionStats.byMonth[monthLabel]
+          ? transactionStats.byMonth[monthLabel][type]
+          : 0,
+      });
+
+      // Move to next month
+      currentDate = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() + 1,
+        1
+      );
+    }
+
+    return options.reverse();
+  }, [transactions, transactionStats, type]);
 
   const updateType = (type: "in" | "out" | "all") => {
     setType(type);
@@ -142,6 +174,7 @@ export default function Filters({
           <DropdownMenuLabel>Filter by Date</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            className="cursor-pointer"
             onClick={() =>
               updateDateRange({ start: null, end: null, label: "All Time" })
             }
@@ -149,6 +182,7 @@ export default function Filters({
             All Time
           </DropdownMenuItem>
           <DropdownMenuItem
+            className="cursor-pointer"
             onClick={() =>
               updateDateRange({
                 start: startOfToday(),
@@ -165,7 +199,7 @@ export default function Filters({
             <DropdownMenuItem
               key={option.label}
               onClick={() => updateDateRange(option)}
-              className="flex justify-between"
+              className="flex justify-between cursor-pointer"
             >
               <span
                 className={
@@ -176,9 +210,7 @@ export default function Filters({
               >
                 {option.label}
               </span>
-              <span className="text-muted-foreground">
-                {transactionStats.byMonth[option.label]?.all || 0}
-              </span>
+              <span className="text-muted-foreground">{option.txCount}</span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

@@ -1,5 +1,7 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, getTxInfoUrlFromURI } from "@/lib/utils";
+import TagsList from "../TagsList";
+import Link from "next/link";
 
 interface TimelineProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;
@@ -27,7 +29,7 @@ interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
     name: string;
   };
   description?: React.ReactNode;
-  tags?: string[];
+  tags?: string[][];
   type: "description" | "tags" | "both";
 }
 
@@ -46,20 +48,45 @@ const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(
       }
     };
 
+    const url = React.useMemo(() => {
+      if (tags && tags.length > 0) {
+        const uri = tags.find((t) => t[0] === "i")?.[1];
+        const path = getTxInfoUrlFromURI(uri);
+        if (path) {
+          return path;
+        }
+      }
+      return null;
+    }, [tags]);
+
     return (
       <div ref={ref} className={cn("relative pb-4", className)} {...props}>
         <div className="absolute left-[-20px] top-1 z-10 h-3 w-3 rounded-full bg-muted-foreground" />
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <time>
-              {new Date(date).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </time>
+            {url ? (
+              <Link href={url}>
+                <time>
+                  {new Date(date).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              </Link>
+            ) : (
+              <time>
+                {new Date(date).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+            )}
           </div>
           <div className="flex flex-row gap-2 items-center">
             <div className="mt-1">
@@ -71,19 +98,12 @@ const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(
                 {description}
               </div>
             )}
-            {tags && tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center rounded-full border bg-muted px-2.5 py-0.5 text-xs font-semibold"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
+          {tags && tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              <TagsList tags={tags} />
+            </div>
+          )}
         </div>
       </div>
     );

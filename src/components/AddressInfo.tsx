@@ -12,12 +12,17 @@ import EditMetadataForm from "@/components/EditMetadataForm";
 import { getENSNameFromAddress } from "@/utils/crypto.server";
 import { generateURI } from "@/lib/utils";
 import type { URI, Address } from "@/types";
-export default function AddressDetails({
+
+export default function AddressInfo({
   chain,
   address,
+  ensName,
+  addressType = "address",
 }: {
   chain: string;
   address: Address;
+  ensName?: string;
+  addressType?: "address" | "token" | "eoa" | "contract";
 }) {
   const chainConfig = chains[chain as keyof typeof chains];
   const [isEditing, setIsEditing] = useState(false);
@@ -27,7 +32,7 @@ export default function AddressDetails({
   subscribeToNotesByURI([uri]);
   const latestNote = notesByURI[uri as URI]?.[0];
   const [addressName, setAddressName] = useState(
-    latestNote?.content || "Unknown address"
+    latestNote?.content || ensName || "Unknown address"
   );
 
   useEffect(() => {
@@ -41,8 +46,10 @@ export default function AddressDetails({
       console.log(">>> fetchENSName", address, ensName);
       setAddressName(ensName || "Unknown address");
     };
-    fetchENSName();
-  }, [address, addressName, notesByURI, uri]);
+    if (!ensName) {
+      fetchENSName();
+    }
+  }, [address, addressName, notesByURI, uri, ensName]);
 
   if (!chainConfig) {
     return <div>Chain not found</div>;
@@ -104,7 +111,7 @@ export default function AddressDetails({
                 truncate
               />
               <a
-                href={`${chainConfig?.explorer_url}/address/${address}`}
+                href={`${chainConfig?.explorer_url}/${addressType}/${address}`}
                 target="_blank"
                 title={`View on ${chainConfig?.explorer_name}`}
                 rel="noopener noreferrer"

@@ -15,13 +15,52 @@ import Filters, { type Filter } from "./Filters";
 import { useLiveTransactions } from "@/hooks/useLiveTransactions";
 import { formatTimestamp, generateURI } from "@/lib/utils";
 import { ethers } from "ethers";
+import Pagination from "./Pagination";
 interface Props {
   chain: string;
   tokenAddress?: Address;
   accountAddress?: Address;
 }
 
-const LIMIT_PER_PAGE = 50;
+const LIMIT_PER_PAGE = 20;
+
+function applyTxFilter(
+  tx: Transaction,
+  transactionsFilter: Filter,
+  accountAddress: Address | undefined
+): boolean {
+  // Apply date filter
+  if (transactionsFilter.dateRange.start && transactionsFilter.dateRange.end) {
+    const txDate = new Date(tx.timestamp * 1000);
+    if (
+      !isWithinInterval(txDate, {
+        start: transactionsFilter.dateRange.start!,
+        end: transactionsFilter.dateRange.end!,
+      })
+    ) {
+      return false;
+    }
+  }
+
+  // Apply token filter
+  if (transactionsFilter.selectedTokens.length > 0) {
+    if (
+      !tx.token?.address ||
+      !transactionsFilter.selectedTokens
+        .map((t) => t.address)
+        .includes(tx.token?.address)
+    ) {
+      return false;
+    }
+  }
+
+  if (accountAddress && transactionsFilter.type === "in") {
+    return tx.to === accountAddress.toLowerCase();
+  } else if (accountAddress && transactionsFilter.type === "out") {
+    return tx.from === accountAddress.toLowerCase();
+  }
+  return true;
+}
 
 export default function Transactions({
   chain,
@@ -29,6 +68,8 @@ export default function Transactions({
   accountAddress,
 }: Props) {
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [txsPerPage, setTxsPerPage] = useState(LIMIT_PER_PAGE);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
@@ -113,50 +154,21 @@ export default function Transactions({
 
   // Filter transactions based on both date and tokens
   const filteredTransactions = useMemo(() => {
-    if (!transactions) return [];
-
-    let filtered = transactions;
-
-    // Apply date filter
-    if (
-      transactionsFilter.dateRange.start &&
-      transactionsFilter.dateRange.end
-    ) {
-      filtered = filtered.filter((tx) => {
-        const txDate = new Date(tx.timestamp * 1000);
-        return isWithinInterval(txDate, {
-          start: transactionsFilter.dateRange.start!,
-          end: transactionsFilter.dateRange.end!,
-        });
-      });
-    }
-
-    // Apply token filter
-    if (transactionsFilter.selectedTokens.length > 0) {
-      filtered = filtered.filter(
-        (tx) =>
-          tx?.token &&
-          tx.token?.address &&
-          transactionsFilter.selectedTokens
-            .map((t) => t.address)
-            .includes(tx.token.address)
-      );
-    }
-
-    if (accountAddress && transactionsFilter.type === "in") {
-      filtered = filtered.filter(
-        (tx) => tx.to === accountAddress.toLowerCase()
-      );
-    } else if (accountAddress && transactionsFilter.type === "out") {
-      filtered = filtered.filter(
-        (tx) => tx.from === accountAddress.toLowerCase()
-      );
-    }
-
-    return filtered.slice(0, 100);
+    return transactions.length > 0
+      ? transactions.filter((tx) =>
+          applyTxFilter(tx, transactionsFilter, accountAddress)
+        )
+      : [];
   }, [transactions, transactionsFilter, accountAddress]);
 
-  useMemo(() => {
+  const currentPageTxs = useMemo(() => {
+    return filteredTransactions.slice(
+      (currentPage - 1) * txsPerPage,
+      currentPage * txsPerPage
+    );
+  }, [filteredTransactions, currentPage, txsPerPage]);
+
+  useEffect(() => {
     // const cachedTransactions = getItem(
     //   `${chain}:${address}:transactions`
     // );
@@ -180,7 +192,7 @@ export default function Transactions({
             tokenAddress
           );
         if (transactions) {
-          setTransactions(transactions.slice(0, 500));
+          setTransactions(transactions);
         }
         setIsLoading(false);
       } catch (error) {
@@ -199,10 +211,10 @@ export default function Transactions({
   // Subscribe to notes for all transactions at once
   const { subscribeToNotesByURI } = useNostr();
 
-  // Initial load
+  // Subscribe to notes for all displayed transactions
   useEffect(() => {
     const uris = new Set<URI>();
-    filteredTransactions.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
+    currentPageTxs.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
       uris.add(
         generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
       );
@@ -215,7 +227,7 @@ export default function Transactions({
     });
 
     subscribeToNotesByURI(Array.from(uris) as URI[]);
-  }, [filteredTransactions, chainConfig, subscribeToNotesByURI]);
+  }, [currentPageTxs, chainConfig, subscribeToNotesByURI]);
 
   if (isLoading) {
     return (
@@ -224,6 +236,8 @@ export default function Transactions({
       </div>
     );
   }
+
+  const totalPages = Math.ceil(filteredTransactions.length / txsPerPage);
 
   return (
     <div className="space-y-6">
@@ -256,7 +270,7 @@ export default function Transactions({
       )}
 
       {/* Transactions List */}
-      {filteredTransactions.map((tx, idx) => {
+      {currentPageTxs.map((tx, idx) => {
         return (
           <TransactionRow
             key={idx}
@@ -270,6 +284,15 @@ export default function Transactions({
           />
         );
       })}
+
+      {/* pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        txsPerPage={txsPerPage}
+        onPageChange={setCurrentPage}
+        onTxsPerPageChange={setTxsPerPage}
+      />
 
       {error && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">

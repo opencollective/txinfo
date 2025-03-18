@@ -1,6 +1,6 @@
 import { Timeline, TimelineItem } from "@/components/ui/timeline";
+import { extractHashtags, getNpubFromPubkey } from "@/lib/utils";
 import { type NostrNote, type NostrProfile } from "@/providers/NostrProvider";
-import { npubEncode } from "nostr-tools/nip19";
 interface Props {
   notes: NostrNote[];
   profiles: Record<string, NostrProfile>;
@@ -10,7 +10,7 @@ export default function NotesList({ notes, profiles }: Props) {
   return (
     <Timeline>
       {notes?.length > 0 &&
-        notes.map((note) => {
+        notes.map((note, i) => {
           const hasTags = note.tags.some((t) => t[0] === "t");
           const type = hasTags
             ? note.content
@@ -18,17 +18,19 @@ export default function NotesList({ notes, profiles }: Props) {
               : "tags"
             : "description";
 
+          const { cleanDescription } = extractHashtags(note.content);
+
           return (
             <TimelineItem
-              key={note.id}
+              key={i}
               date={note.created_at * 1000}
               user={{
                 name:
                   profiles[note.pubkey]?.name ??
-                  `${npubEncode(note.pubkey).slice(0, 12)}...`,
+                  getNpubFromPubkey(note.pubkey, { truncate: true }),
               }}
-              description={note.content}
-              tags={note.tags.filter((t) => t[0] === "t").map((t) => t[1])}
+              description={cleanDescription}
+              tags={note.tags}
               type={type}
             />
           );

@@ -30,6 +30,20 @@ const localStorage =
         },
       };
 
+const setItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    console.error(
+      "Error setting item:",
+      err,
+      "item length:",
+      value.length,
+      `${((value.length * 2) / 1024 / 1024).toFixed(2)}MB`
+    );
+  }
+};
+
 export const getBlockTimestamp = async (
   chain: string,
   blockNumber: number,
@@ -45,7 +59,7 @@ export const getBlockTimestamp = async (
   if (!block) {
     throw new Error(`Block not found: ${blockNumber}`);
   }
-  localStorage.setItem(key, block.timestamp.toString());
+  setItem(key, block.timestamp.toString());
   return block.timestamp;
 };
 
@@ -85,7 +99,7 @@ export async function getTokenDetails(
     };
 
     // Cache the result
-    localStorage.setItem(
+    setItem(
       key,
       JSON.stringify(tokenDetails, (_, value) =>
         typeof value === "bigint" ? value.toString() : value
@@ -120,7 +134,8 @@ type TxDetails = {
   events: LogEvent[];
 };
 
-export function useTxDetails(chain: string, txHash: string) {
+export function useTxDetails(chain: string, txHash?: string) {
+  console.log(">>> useTxDetails", chain, txHash);
   const [txDetails, setTxDetails] = useState<TxDetails | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -133,6 +148,7 @@ export function useTxDetails(chain: string, txHash: string) {
 
   useEffect(() => {
     const fetchToken = async () => {
+      if (!txHash) return;
       try {
         const tx = await getTxDetails(txHash, provider.current);
         const token = await getTokenDetails(
@@ -147,7 +163,6 @@ export function useTxDetails(chain: string, txHash: string) {
         setIsLoading(false);
       }
     };
-
     fetchToken();
   }, [chain, txHash]);
 
@@ -171,7 +186,6 @@ export async function getAddressType(
     res = "eoa";
   } else {
     console.log(`${address} is a Smart Contract.`);
-    console.log(">>> code", code);
 
     // Proxy-related signatures and patterns
     const proxySlotSig =
@@ -213,7 +227,7 @@ export async function getAddressType(
       }
     }
   }
-  localStorage.setItem(key, res);
+  setItem(key, res);
   return res;
 }
 
@@ -277,7 +291,7 @@ export async function getTxDetails(tx_hash: string, provider: JsonRpcProvider) {
       events,
     };
 
-    localStorage.setItem(
+    setItem(
       tx.hash,
       JSON.stringify(res, (_, value) =>
         typeof value === "bigint" ? value.toString() : value
@@ -312,7 +326,8 @@ export async function processBlockRange(
   toBlock: number,
   provider: JsonRpcProvider
 ): Promise<Transaction[]> {
-  const key = `${chain}:${address}[${fromBlock}:${toBlock}]`.toLowerCase();
+  const key =
+    `${chain}:${address}[${fromBlock}-${toBlock}]-processed`.toLowerCase();
   const cached = localStorage.getItem(key);
   // @ts-expect-error useCache is not defined in the window object
   if (cached && (!window.useCache || window.useCache !== false)) {
@@ -339,7 +354,7 @@ export async function processBlockRange(
         };
       })
     );
-    localStorage.setItem(key, JSON.stringify(newTxs));
+    setItem(key, JSON.stringify(newTxs));
     return newTxs;
   } else {
     return [];
@@ -444,7 +459,7 @@ export async function getBlockRange(
     // Finally by log index
     return b.logIndex - a.logIndex;
   });
-  if (!hasError) localStorage.setItem(key, JSON.stringify(res));
+  if (!hasError) setItem(key, JSON.stringify(res));
   return res.filter((tx) => tx !== null) as Transaction[];
 }
 
@@ -498,7 +513,7 @@ export async function getBlockRangeForAddress(
         ? Number(transactions[transactions.length - 1].blockNumber)
         : undefined;
     console.log(">>> blockRangeForAddress", address, firstBlock, lastBlock);
-    // localStorage.setItem(key, blockNumber.toString());
+    // setItem(key, blockNumber.toString());
     return { firstBlock, lastBlock };
   } else {
     console.log(">>> no transactions found for", chain, address);
@@ -511,11 +526,14 @@ export async function getTransactionsFromEtherscan(
   address?: string,
   tokenAddress?: string
 ): Promise<null | Transaction[]> {
-  // const key = `${chain}:${address}:firstBlock`;
-  // const cached = localStorage.getItem(key);
-  // if (cached) {
-  //   return JSON.parse(cached);
-  // }
+  const today = new Date().toISOString().split("T")[0].replace(/-/g, "");
+  const key = `${chain}:${address}${
+    tokenAddress ? `:${tokenAddress}` : ""
+  }[0-${today}]`.toLowerCase();
+  const cached = localStorage.getItem(key);
+  if (cached) {
+    return JSON.parse(cached);
+  }
 
   const params = new URLSearchParams({
     chain,
@@ -556,7 +574,7 @@ export async function getTransactionsFromEtherscan(
   try {
     const data = await response.json();
     if (data.status === "1") {
-      return data.result.map((tx: EtherscanTransfer) => ({
+      const res = data.result.map((tx: EtherscanTransfer) => ({
         blockNumber: Number(tx.blockNumber),
         txHash: tx.hash,
         txIndex: Number(tx.transactionIndex),
@@ -571,6 +589,8 @@ export async function getTransactionsFromEtherscan(
           symbol: tx.tokenSymbol,
         },
       }));
+      setItem(key, JSON.stringify(res));
+      return res;
     } else {
       console.log(">>> error from /api/etherscan", data);
       return null;

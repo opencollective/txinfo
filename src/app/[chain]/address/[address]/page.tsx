@@ -15,8 +15,13 @@ export default async function Page({
   }
 
   let addr = address as Address;
+  let ensName: string | undefined;
   if (address.endsWith(".eth")) {
+    ensName = address;
     addr = (await getAddressFromENSName(address)) as Address;
+    if (!addr) {
+      return <div>Could not resolve ENS name</div>;
+    }
   }
 
   if (!addr || !isAddress(addr)) {
@@ -26,7 +31,11 @@ export default async function Page({
   return (
     <div className="app">
       <div className="flex flex-col gap-4">
-        <AddressInfo chain={chain} address={addr as Address} />
+        <AddressInfo
+          chain={chain}
+          address={addr as Address}
+          ensName={ensName}
+        />
         <Transactions chain={chain} accountAddress={addr as Address} />
       </div>
     </div>

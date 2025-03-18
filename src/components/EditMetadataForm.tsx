@@ -2,9 +2,9 @@ import { useState, KeyboardEvent } from "react";
 import { useNostr } from "@/providers/NostrProvider";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, extractHashtags } from "@/lib/utils";
 import type { URI } from "@/types";
-export default function NoteForm({
+export default function EditMetadataForm({
   uri,
   inputRef,
   onCancel,
@@ -26,22 +26,6 @@ export default function NoteForm({
   const { publishMetadata, notesByURI } = useNostr();
 
   // Extract hashtags from description and return both tags and cleaned description
-  const extractHashtags = (
-    text: string
-  ): { tags: string[]; cleanDescription: string } => {
-    // Updated regex to match hashtags with simple values, key:attr format, and floating point numbers
-    const hashtagRegex = /#(\w+(?::\w+(?:\.\d+)?)?)/g;
-    const matches = text.match(hashtagRegex) || [];
-    const tags = matches.map((tag) => tag.substring(1)); // Remove the # symbol
-
-    // Remove hashtags from the description
-    const cleanDescription = text
-      .replace(hashtagRegex, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return { tags, cleanDescription };
-  };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +80,7 @@ export default function NoteForm({
   if (tags) {
     let tagsString = "";
     tags
-      .filter((t) => t[0] != "I")
+      .filter((t) => t[0] != "i" && t[0] != "k")
       .map((t) => {
         tagsString += t[0] == "t" ? `#${t[1]} ` : `#${t[0]}:${t[1]} `;
       });

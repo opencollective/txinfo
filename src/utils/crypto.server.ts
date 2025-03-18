@@ -13,25 +13,35 @@ export async function getENSNameFromAddress(address: Address) {
     console.log(">>> ensNameCache hit", address, ensNameCache.get(address));
     return ensNameCache.get(address);
   }
-  const rpcIndex = Math.floor(Math.random() * chains["ethereum"].rpc.length);
-  const provider = new JsonRpcProvider(chains["ethereum"].rpc[rpcIndex]);
-  const ensName = await provider.lookupAddress(address);
-  if (ensName) {
-    ensNameCache.set(address, ensName || "");
+  try {
+    // const rpcIndex = Math.floor(Math.random() * chains["ethereum"].rpc.length);
+    const provider = new JsonRpcProvider(chains["ethereum"].rpc[0]);
+    const ensName = await provider.lookupAddress(address);
+    if (ensName) {
+      ensNameCache.set(address, ensName || "");
+    }
+    console.log(">>> ensNameCache miss", address, ensName);
+    return ensName || undefined;
+  } catch (error) {
+    console.error(">>> error getting ENS name", error);
+    return undefined;
   }
-  console.log(">>> ensNameCache miss", address, ensName);
-  return ensName || undefined;
 }
 const ensAddressCache = new Map<string, Address>();
 export async function getAddressFromENSName(ensName: string) {
   if (ensAddressCache.has(ensName)) {
     return ensAddressCache.get(ensName);
   }
-  const rpcIndex = Math.floor(Math.random() * chains["ethereum"].rpc.length);
-  const provider = new JsonRpcProvider(chains["ethereum"].rpc[rpcIndex]);
-  const address = await provider.resolveName(ensName);
-  if (address) {
-    ensAddressCache.set(ensName, address as Address);
+  try {
+    // const rpcIndex = Math.floor(Math.random() * chains["ethereum"].rpc.length);
+    const provider = new JsonRpcProvider(chains["ethereum"].rpc[0]);
+    const address = await provider.resolveName(ensName);
+    if (address) {
+      ensAddressCache.set(ensName, address as Address);
+    }
+    return address as Address;
+  } catch (error) {
+    console.error(">>> error getting address from ENS name", error);
+    return undefined;
   }
-  return address as Address;
 }
