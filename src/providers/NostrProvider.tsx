@@ -21,13 +21,7 @@ import relays from "@/relays.json";
 import { decode, nsecEncode, npubEncode } from "nostr-tools/nip19";
 import { db } from "@/services/db";
 import { insertEventIntoDescendingList } from "nostr-tools/utils";
-
-type HexString<Length extends number> = `0x${string}` & { length: Length };
-export type Address = HexString<42>;
-export type TxHash = HexString<66>;
-export type ChainId = number;
-export type AddressType = "address" | "tx";
-export type URI = `${ChainId}:${AddressType}:${Address | TxHash}`;
+import { URI } from "@/types";
 
 export type NostrNote = {
   id: string;
@@ -64,7 +58,7 @@ interface NostrContextType {
     picture: string;
     website: string;
   }) => Promise<void>;
-  publishNote: (
+  publishMetadata: (
     URI: URI,
     { content, tags }: { content: string; tags: string[][] }
   ) => Promise<void>;
@@ -84,6 +78,34 @@ const getItem = (key: string) => {
 const setItem = (key: string, data: string) => {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, data);
+};
+
+const getURIFromNostrEvent = (event: NostrEvent): URI | undefined => {
+  return event.tags.find((t) => t[0] === "I" || t[0] === "i")?.[1] as
+    | URI
+    | undefined; // TODO: remove "I" (backward compatibility)
+};
+
+const getKindFromURI = (uri: URI): string => {
+  const type = uri.match(/:tx:/) ? "tx" : "address";
+  const blockchain = uri.startsWith("bitcoin") ? "bitcoin" : "ethereum";
+  return `${blockchain}:${type}`;
+};
+
+const convertOldNostrEvent = (event: NostrEvent): NostrEvent => {
+  const oldURI = getURIFromNostrEvent(event);
+  const newURI = `ethereum:${oldURI}`;
+  const newEvent: NostrEvent = {
+    ...event,
+    id: "", // Will be set by finalizeEvent
+    sig: "", // Will be set by finalizeEvent
+    tags: [
+      ["i", newURI],
+      ["k", getKindFromURI(getURIFromNostrEvent(event) as URI)],
+      ...event.tags.filter((t) => t[0] !== "I"),
+    ],
+  };
+  return newEvent;
 };
 
 export function NostrProvider({ children }: { children: React.ReactNode }) {
@@ -148,10 +170,6 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
-
-  const getURIFromNostrEvent = (event: NostrEvent): URI | undefined => {
-    return event.tags.find((t) => t[0] === "I")?.[1] as URI | undefined;
-  };
 
   const addNostrEventsToState = useCallback((events: NostrEvent[]) => {
     if (!events || events.length === 0) return;
@@ -281,29 +299,44 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     [addNostrEventsToState, createNewSubscription]
   );
 
-  const publishNote = useCallback(
+  const publishEvent = useCallback(
+    async (event: EventTemplate, nsec: string) => {
+      if (!pool) throw new Error("Not connected");
+
+      const { data: secretKey } = decode(nsec);
+      const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
+      console.log(">>> NostrProvider publishEvent: signedEvent", signedEvent);
+      await Promise.any(pool.publish(relays, signedEvent));
+      addNostrEventsToState([signedEvent]);
+      console.log(
+        ">>> NostrProvider publishEvent: signedEvent added to state",
+        signedEvent
+      );
+      return signedEvent;
+    },
+    [pool, addNostrEventsToState]
+  );
+
+  const publishMetadata = useCallback(
     async (
-      URI: URI,
+      uri: URI,
       { content, tags }: { content: string; tags: string[][] }
     ) => {
-      if (!pool) throw new Error("Not connected");
       const nsec = getItem("nostr_nsec");
       if (!nsec) throw new Error("Not logged in");
 
-      const { data: secretKey } = decode(nsec);
       const event: EventTemplate = {
         kind: 1111,
         created_at: Math.floor(Date.now() / 1000),
         content,
-        tags: [["I", URI.toLowerCase()], ...tags],
+        tags: [["i", uri], ["k", getKindFromURI(uri)], ...tags],
       };
-      const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
-      console.log(">>> NostrProvider publishNote: signedEvent", signedEvent);
-      await Promise.any(pool.publish(relays, signedEvent));
-      db?.addNostrEvent(URI, signedEvent);
-      addNostrEventsToState([signedEvent]);
+
+      const signedEvent = await publishEvent(event, nsec);
+      db?.addNostrEvent(uri, signedEvent);
+      return signedEvent;
     },
-    [pool, addNostrEventsToState]
+    [publishEvent]
   );
 
   const updateProfile = useCallback(
@@ -353,7 +386,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       subscribeToProfiles,
       profiles,
       updateProfile,
-      publishNote,
+      publishMetadata,
     }),
     [
       pool,
@@ -363,9 +396,43 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       subscribeToProfiles,
       profiles,
       updateProfile,
-      publishNote,
+      publishMetadata,
     ] // Include all dependencies
   );
+
+  // Upgrade old events (deprecated)
+  useEffect(() => {
+    const nsec = getItem("nostr_nsec") as string;
+    db?.getNostrEvents().then((events) => {
+      console.log(
+        ">>> NostrProvider events",
+        events.filter((e) => getURIFromNostrEvent(e)?.startsWith("ethereum:"))
+          .length,
+        "starts with ethereum out of",
+        events.length,
+        events
+      );
+      events.slice(0, 20).forEach(async (event) => {
+        const uri = getURIFromNostrEvent(event);
+        if (!uri) return;
+        if (uri.match(/^[0-9]+:/)) {
+          const newEvent = convertOldNostrEvent(event);
+          console.log(">>> waiting 3 seconds to connect to pool");
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          try {
+            const signedEvent = await publishEvent(newEvent, nsec);
+            if (signedEvent.id) {
+              db?.addNostrEvent(`ethereum:${uri}` as URI, signedEvent);
+              db?.deleteNostrEvent(event.id);
+              console.log(">>> Upgraded", event, newEvent);
+            }
+          } catch (error) {
+            console.error(">>> Error upgrading event", error, event, newEvent);
+          }
+        }
+      });
+    });
+  }, [publishEvent]);
 
   return (
     <NostrContext.Provider value={contextValue}>
@@ -426,7 +493,7 @@ export const useNostr = () => {
     connectedRelays: context.connectedRelays,
     updateProfile: context.updateProfile,
     profiles: context.profiles,
-    publishNote: context.publishNote,
+    publishMetadata: context.publishMetadata,
     notesByURI: context.notesByURI,
     subscribeToNotesByURI: context.subscribeToNotesByURI,
     subscribeToProfiles: context.subscribeToProfiles,

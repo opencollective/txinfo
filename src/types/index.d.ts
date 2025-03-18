@@ -1,9 +1,21 @@
 type HexString<Length extends number> = `0x${string}` & { length: Length };
 export type Address = HexString<42>;
+
+type BitcoinAddress =
+  | `1${string}` // Legacy addresses
+  | `3${string}` // P2SH addresses
+  | `bc1${string}`; // Native SegWit addresses
+
 export type TxHash = HexString<66>;
+export type TxId = HexString<64>;
 export type ChainId = number;
+export type Blockchain = "ethereum" | "bitcoin";
 export type AddressType = "address" | "tx";
-export type URI = `${ChainId}:${AddressType}:${Address | TxHash}`;
+export type URI =
+  | `ethereum:${ChainId}:address:${Address}`
+  | `ethereum:${ChainId}:tx:${TxHash}`
+  | `bitcoin:address:${BitcoinAddress}`
+  | `bitcoin:tx:${TxId}`;
 
 export type Token = {
   name?: string;

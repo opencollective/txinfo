@@ -181,7 +181,6 @@ export async function getAddressType(
     const isProxy = code.includes(proxySlotSig);
 
     if (isProxy) {
-      console.log(">>> isProxy", address);
       // For proxies, we should check the implementation contract
       try {
         const contract = new ethers.Contract(address, ERC20_ABI, provider);

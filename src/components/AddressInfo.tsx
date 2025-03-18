@@ -10,6 +10,7 @@ import { useNostr, type URI, type Address } from "@/providers/NostrProvider";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import { getENSNameFromAddress } from "@/utils/crypto.server";
+import { generateURI } from "@/lib/utils";
 
 export default function AddressDetails({
   chain,
@@ -22,7 +23,7 @@ export default function AddressDetails({
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-  const uri = `${chainConfig.id}:address:${address}`.toLowerCase() as URI;
+  const uri = generateURI("ethereum", { chainId: chainConfig.id, address });
   subscribeToNotesByURI([uri]);
   const latestNote = notesByURI[uri as URI]?.[0];
   const [addressName, setAddressName] = useState(

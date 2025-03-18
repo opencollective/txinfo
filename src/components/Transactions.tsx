@@ -14,7 +14,7 @@ import { URI, useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
 import { useLiveTransactions } from "@/hooks/useLiveTransactions";
-import { formatTimestamp } from "@/lib/utils";
+import { formatTimestamp, generateURI } from "@/lib/utils";
 import { ethers } from "ethers";
 interface Props {
   chain: string;
@@ -204,9 +204,15 @@ export default function Transactions({
   useEffect(() => {
     const uris = new Set<URI>();
     filteredTransactions.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
-      uris.add(`${chainConfig.id}:address:${tx.from}`);
-      uris.add(`${chainConfig.id}:address:${tx.to}`);
-      uris.add(`${chainConfig.id}:tx:${tx.txHash}`);
+      uris.add(
+        generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
+      );
+      uris.add(
+        generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
+      );
+      uris.add(
+        generateURI("ethereum", { chainId: chainConfig.id, txHash: tx.txHash })
+      );
     });
 
     subscribeToNotesByURI(Array.from(uris) as URI[]);
