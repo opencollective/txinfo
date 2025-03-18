@@ -4,8 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { useTxDetails } from "@/utils/crypto";
-import { URI } from "@/providers/NostrProvider";
-import type { ChainConfig } from "@/types";
+import type { URI, ChainConfig } from "@/types";
 import chains from "@/chains.json";
 
 export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {

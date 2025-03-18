@@ -8,12 +8,10 @@ import {
 } from "lucide-react";
 import { cn, formatTimestamp } from "@/lib/utils";
 import { ethers } from "ethers";
-import { Address } from "@/providers/NostrProvider";
 import { truncateAddress } from "@/utils/crypto";
-import type { Transaction } from "@/types/index.d.ts";
 import { useMemo } from "react";
-import type { Token } from "@/types/index.d.ts";
 import { formatNumber } from "@/lib/utils";
+import type { Transaction, Token, Address } from "@/types";
 
 export default function StatsCards({
   transactions,

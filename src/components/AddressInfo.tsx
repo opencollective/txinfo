@@ -6,11 +6,12 @@ import chains from "../chains.json";
 import { ExternalLink, Edit } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { Tag } from "@/components/ui/tag";
-import { useNostr, type URI, type Address } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import { getENSNameFromAddress } from "@/utils/crypto.server";
-
+import { generateURI } from "@/lib/utils";
+import type { URI, Address } from "@/types";
 export default function AddressDetails({
   chain,
   address,
@@ -22,7 +23,7 @@ export default function AddressDetails({
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-  const uri = `${chainConfig.id}:address:${address}`.toLowerCase() as URI;
+  const uri = generateURI("ethereum", { chainId: chainConfig.id, address });
   subscribeToNotesByURI([uri]);
   const latestNote = notesByURI[uri as URI]?.[0];
   const [addressName, setAddressName] = useState(

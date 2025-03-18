@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { formatInTimeZone } from "date-fns-tz";
+import { URI } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -54,4 +55,24 @@ export function formatTimestamp(ts: number, format = "MMM d HH:mm"): string {
     Intl.DateTimeFormat().resolvedOptions().timeZone,
     format // "MMM d, yyyy 'at' HH:mm:ss zzz"
   );
+}
+
+export function generateURI(
+  blockchain: string, // ethereum, bitcoin, solana, ...
+  params: { chainId?: number; txHash?: string; address?: string }
+): URI {
+  const parts: (string | number)[] = [blockchain];
+  if (params.chainId) {
+    parts.push(params.chainId);
+  }
+  if (params.txHash) {
+    parts.push("tx");
+    parts.push(params.txHash);
+  } else if (params.address) {
+    parts.push("address");
+    parts.push(params.address);
+  } else {
+    throw new Error("Invalid parameters");
+  }
+  return parts.join(":").toLowerCase() as URI;
 }

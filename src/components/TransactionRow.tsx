@@ -17,11 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import NotesList from "@/components/NotesList";
-import { URI, useNostr } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 import type { Transaction, Address, TxHash } from "@/types";
 import EditMetadataForm from "@/components/EditMetadataForm";
 import TagsList from "./TagsList";
-import { formatNumber, formatTimestamp } from "@/lib/utils";
+import { formatNumber, formatTimestamp, generateURI } from "@/lib/utils";
 interface TransactionRowProps {
   tx: Transaction;
   chain: string;
@@ -46,7 +46,7 @@ export function TransactionRow({
 }: TransactionRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { publishNote, notesByURI, profiles } = useNostr();
+  const { publishMetadata, notesByURI, profiles } = useNostr();
 
   // Profile editing states
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -76,7 +76,7 @@ export function TransactionRow({
     return null;
   }
 
-  const uri = `${chainId}:tx:${tx.txHash}` as URI;
+  const uri = generateURI("ethereum", { chainId, txHash: tx.txHash });
   const lastNote = notesByURI[uri] && notesByURI[uri][0];
 
   const getDicebearUrl = (address: string) => {
@@ -100,16 +100,16 @@ export function TransactionRow({
     setIsSubmittingProfile(true);
 
     try {
-      const uri = `${chainId}:address:${currentAddress}`.toLowerCase() as URI;
+      const uri = generateURI("ethereum", { chainId, address: currentAddress });
       const previousNote = notesByURI[uri] ? notesByURI[uri][0] : null;
       // Here you would publish the profile data to nostr
       // This is a placeholder for the actual implementation
-      await publishNote(uri, {
+      await publishMetadata(uri, {
         content: profileData.name,
         tags: [
           // Make sure we don't duplicate tags
           ...(previousNote?.tags || []).filter(
-            (t) => ["I", "picture", "website", "about"].indexOf(t[0]) === -1
+            (t) => ["i", "picture", "website", "about"].indexOf(t[0]) === -1
           ),
           ["picture", profileData.picture],
           ["about", profileData.about],
@@ -136,7 +136,7 @@ export function TransactionRow({
       website: "",
     };
     if (!address) return defaultProfile;
-    const uri = `${chainId}:address:${address}`.toLowerCase() as URI;
+    const uri = generateURI("ethereum", { chainId, address });
     if (!notesByURI[uri]) return defaultProfile;
     const profileNote = notesByURI[uri][0];
     if (profileNote) {

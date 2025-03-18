@@ -149,6 +149,16 @@ class Database extends Dexie {
     }
   }
 
+  async getNostrEvents(): Promise<NostrEvent[]> {
+    const events = await this.nostrEvents.toArray();
+
+    return events.map((e) => JSON.parse(e.event));
+  }
+
+  async deleteNostrEvent(eventId: string): Promise<void> {
+    await this.nostrEvents.where("event_id").equals(eventId).delete();
+  }
+
   async getNostrEventsByURI(uri: URI): Promise<NostrEvent[]> {
     const events = await this.nostrEvents
       .where("parent_uri")

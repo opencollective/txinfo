@@ -1,8 +1,9 @@
 import { useState, KeyboardEvent } from "react";
-import { useNostr, type URI } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { URI } from "@/types";
 export default function NoteForm({
   uri,
   inputRef,
@@ -22,7 +23,7 @@ export default function NoteForm({
   const [formData, setFormData] = useState({
     description: "",
   });
-  const { publishNote, notesByURI } = useNostr();
+  const { publishMetadata, notesByURI } = useNostr();
 
   // Extract hashtags from description and return both tags and cleaned description
   const extractHashtags = (
@@ -64,12 +65,12 @@ export default function NoteForm({
         ? notesByURI[uri][notesByURI[uri].length - 1]
         : { tags: [] };
 
-      await publishNote(uri, {
+      await publishMetadata(uri, {
         content: cleanDescription,
         tags: [
           // Make sure we don't duplicate tags
           ...previousNote?.tags.filter(
-            (t) => ["I", ...newTags.map((nt) => nt[0])].indexOf(t[0]) === -1
+            (t) => ["i", ...newTags.map((nt) => nt[0])].indexOf(t[0]) === -1
           ),
           ...newTags,
         ],

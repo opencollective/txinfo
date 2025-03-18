@@ -1,7 +1,7 @@
 import TxDetails from "@/components/TxDetails";
 import Metadata from "@/components/Metadata";
 import chains from "@/chains.json";
-import { URI } from "@/providers/NostrProvider";
+import { generateURI } from "@/lib/utils";
 export default async function Page({
   params,
 }: {
@@ -9,7 +9,10 @@ export default async function Page({
 }) {
   const { chain, tx_hash } = await params;
   const chainConfig = chains[chain as keyof typeof chains];
-  const uri = `${chainConfig.id}:tx:${tx_hash}`.toLowerCase() as URI;
+  const uri = generateURI("ethereum", {
+    chainId: chainConfig.id,
+    txHash: tx_hash,
+  });
   return (
     <div className="app">
       <div className="flex flex-col gap-4">

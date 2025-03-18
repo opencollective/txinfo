@@ -10,10 +10,9 @@ import { TransactionRow } from "@/components/TransactionRow";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { X } from "lucide-react";
-import type { Address, Token } from "@/types";
-import { cn } from "@/lib/utils";
-import type { Transaction } from "@/types/index.d.ts";
-import { URI, useNostr } from "@/providers/NostrProvider";
+import type { Address, Token, URI, Transaction } from "@/types";
+import { cn, generateURI } from "@/lib/utils";
+import { useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
 
@@ -257,9 +256,15 @@ export default function Transactions({ address, chain }: Props) {
   useEffect(() => {
     const uris = new Set<URI>();
     filteredTransactions.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
-      uris.add(`${chainConfig.id}:address:${tx.from}`);
-      uris.add(`${chainConfig.id}:address:${tx.to}`);
-      uris.add(`${chainConfig.id}:tx:${tx.txHash}`);
+      uris.add(
+        generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
+      );
+      uris.add(
+        generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
+      );
+      uris.add(
+        generateURI("ethereum", { chainId: chainConfig.id, txHash: tx.txHash })
+      );
     });
 
     subscribeToNotesByURI(Array.from(uris) as URI[]);

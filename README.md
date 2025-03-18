@@ -1,22 +1,20 @@
 # txinfo
 
-Add more information about a blockchain transaction or address using Nostr.
+Add metadata about a blockchain transaction or address using Nostr.
 
 Local first, decentralized and censorship resistant.
 
-Etherscan API key is only required for optimization (copy `.env.example` to `.env`).
-
 ### How does it work?
 
-Just publish a kind 1111 note with the following tags:
+Every time you add metadata to a blockchain object (tx or address), it publishes a kind 1111 note with the following tags:
 
 ```json
 {
   "kind": 1111,
   "content": "Human readable description of the transaction", // plain text, no markdown
   "tags": [
-    ["I", "<chain_id>:tx:<tx_hash>", "https://etherscan.io/tx/<tx_hash>"], // root URL
-    ["K", "<chain_id>:tx"], // the root kind
+    ["i", "<blockchain>:[<chain_id>:](tx|address):<tx_hash>|<address>", "https://etherscan.io/tx/<tx_hash>"], // root URL
+    ["k", "<blockchain>:(tx|address)"], // the root kind
     ["t", "tag1"],
     ["t", "tag2"],
     // example of custom tags:
@@ -29,7 +27,13 @@ Just publish a kind 1111 note with the following tags:
 }
 ```
 
-For more explanation about the required attributes, see https://github.com/nostr-protocol/nips/blob/master/22.md
+Where 
+- `<blockchain>`: `bitcoin` or `ethereum` (feel free to make a pull request to add support for more chains, e.g. `solana`)
+- `<chain_id>`: only required for ethereum to differentiate between all the EVM compatible chains. See chain id on [chainlist.org](https://chainlist.org/).
+
+The frontend will automatically generate a new Nostr user unless a `nostr_nsec` key is present in the local storage (so if you want to use your own nsec, just enter `localStorage.setItem("nostr_nsec", nsec);` in the browser console).
+
+For more explanation about the required attributes for the Nostr note, see [NIP-22](https://github.com/nostr-protocol/nips/blob/master/22.md) and [NIP-73](https://github.com/nostr-protocol/nips/blob/master/73.md).
 
 To add metadata about an address:
 
@@ -38,12 +42,11 @@ To add metadata about an address:
   "kind": 1111,
   "content": "Human readable description of the address", // plain text, no markdown
   "tags": [
-    ["I", "<chain_id>:address:<address>", "https://etherscan.io/address/<address>"], // root URL
-    ["K", "<chain_id>:address"], // the root kind
+    ["i", "<blockchain>:<chain_id>:address:<address>", "https://etherscan.io/address/<address>"], // URI
+    ["k", "<blockchain>:address"], // kind
     ["t", "tag1"],
     ["t", "tag2"],
     // example of custom tags:
-    ["type", "<EOA|contract|ERC20>"],
     ["name", "<name>"],
     ["about", "<about>"],
     ["picture", "<picture url>"],
@@ -64,8 +67,8 @@ Within a `NostrProvider`
 const { notesByURI, subscribeToNotesByURI, updateProfile } = useNostr();
 
 const uris = [
-  '100:address:0x6fdf0aae33e313d9c98d2aa19bcd8ef777912cbf',
-  '100:tx:0x473193c3906e453f90b7b95dc490b40d76afa90adf4a98f239c7a8c8bf396e10'
+  'ethereum:100:address:0x6fdf0aae33e313d9c98d2aa19bcd8ef777912cbf',
+  'ethereum:100:tx:0x473193c3906e453f90b7b95dc490b40d76afa90adf4a98f239c7a8c8bf396e10'
 ];
 
 subscribeToURI(uris);
@@ -74,7 +77,7 @@ subscribeToURI(uris);
 ### Publish metadata
 
 ```
-const { publishNote } = useNostr();
+const { publishMetadata } = useNostr();
 ```
 
 (requires `localStorage.getItem("nostr_nsec");`)
@@ -87,5 +90,18 @@ const tags = [
   ["chain":"gnosis"],
   ["picture","https://citizenspring.earth/favicon.ico"]
 ]
-publishNote(uri, { content, tags });
+publishMetadata(uri, { content, tags });
 ```
+
+
+## Installation
+
+```
+npm install
+cp .env.example .env
+vim .env // i.e. edit this file
+npm run dev
+```
+
+You can create a free Etherscan api key on the etherscan website (one per chain).
+Only required to speed up populating transactions (copy `.env.example` to `.env`).
