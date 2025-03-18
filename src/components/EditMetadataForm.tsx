@@ -1,8 +1,9 @@
 import { useState, KeyboardEvent } from "react";
-import { useNostr, type URI } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { URI } from "@/types";
 export default function NoteForm({
   uri,
   inputRef,

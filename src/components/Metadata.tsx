@@ -2,7 +2,8 @@
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import NotesList from "@/components/NotesList";
-import { URI, useNostr } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
+import type { URI } from "@/types";
 export interface Metadata {
   name?: string;
   about?: string;

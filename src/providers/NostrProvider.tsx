@@ -16,6 +16,7 @@ import {
   NostrEvent,
   generateSecretKey,
   getPublicKey,
+  VerifiedEvent,
 } from "nostr-tools";
 import relays from "@/relays.json";
 import { decode, nsecEncode, npubEncode } from "nostr-tools/nip19";
@@ -61,7 +62,7 @@ interface NostrContextType {
   publishMetadata: (
     URI: URI,
     { content, tags }: { content: string; tags: string[][] }
-  ) => Promise<void>;
+  ) => Promise<VerifiedEvent>;
 }
 
 const NostrContext = createContext<NostrContextType | null>(null);

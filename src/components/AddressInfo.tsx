@@ -6,12 +6,12 @@ import chains from "../chains.json";
 import { ExternalLink, Edit } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { Tag } from "@/components/ui/tag";
-import { useNostr, type URI, type Address } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import { getENSNameFromAddress } from "@/utils/crypto.server";
 import { generateURI } from "@/lib/utils";
-
+import type { URI, Address } from "@/types";
 export default function AddressDetails({
   chain,
   address,

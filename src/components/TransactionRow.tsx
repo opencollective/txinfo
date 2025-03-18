@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import NotesList from "@/components/NotesList";
-import { URI, useNostr } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 import type { Transaction, Address, TxHash } from "@/types";
 import EditMetadataForm from "@/components/EditMetadataForm";
 import TagsList from "./TagsList";

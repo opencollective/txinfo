@@ -10,10 +10,9 @@ import { TransactionRow } from "@/components/TransactionRow";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { X } from "lucide-react";
-import type { Address, Token } from "@/types";
+import type { Address, Token, URI, Transaction } from "@/types";
 import { cn, generateURI } from "@/lib/utils";
-import type { Transaction } from "@/types/index.d.ts";
-import { URI, useNostr } from "@/providers/NostrProvider";
+import { useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
 
