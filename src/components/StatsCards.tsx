@@ -49,6 +49,8 @@ export default function StatsCards({
     };
   }, [transactions, accountAddress]);
 
+  console.log(">>> StatsCards", tokens);
+
   return (
     <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
       <Card>

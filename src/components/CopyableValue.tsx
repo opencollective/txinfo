@@ -41,7 +41,7 @@ export default function CopyableValue({
       {label && <div className="text-sm text-gray-500">{label}</div>}
       <div
         className={cn(
-          "flex items-center gap-2 p-2 bg-gray-50 rounded-lg",
+          "flex items-center gap-2 px-2 py-0 bg-gray-50 rounded-lg",
           className
         )}
       >

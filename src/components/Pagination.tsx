@@ -19,7 +19,7 @@ export default function Pagination({
     <div className="flex justify-center items-center gap-2">
       {/* selector to change number of transactions per page */}
       <select
-        className="border rounded-md p-2"
+        className="border rounded-md"
         value={txsPerPage}
         onChange={(e) => onTxsPerPageChange(Number(e.target.value))}
       >

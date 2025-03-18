@@ -91,6 +91,9 @@ export default function Transactions({
   const [error, setError] = useState<string | null>(null);
 
   const chainConfig = chains[chain as keyof typeof chains];
+  const referenceAccount = accountAddress
+    ? accountAddress
+    : "0x0000000000000000000000000000000000000000";
 
   // Get unique token symbols from transactions
   const availableTokens = useMemo(() => {
@@ -126,11 +129,11 @@ export default function Transactions({
           };
           tokenStats.txCount++;
           const value = Number(ethers.formatUnits(tx.value, tx.token.decimals));
-          if (tx.from === accountAddress?.toLowerCase()) {
+          if (tx.from === referenceAccount.toLowerCase()) {
             tokenStats.outbound.count++;
             tokenStats.outbound.value += value;
             tokenStats.netValue -= value;
-          } else if (tx.to === accountAddress?.toLowerCase()) {
+          } else if (tx.to === referenceAccount.toLowerCase()) {
             tokenStats.inbound.count++;
             tokenStats.inbound.value += value;
             tokenStats.netValue += value;
@@ -150,7 +153,7 @@ export default function Transactions({
       console.error("Error processing tokens:", error);
       return [];
     }
-  }, [transactions, accountAddress]);
+  }, [transactions, referenceAccount]);
 
   // Filter transactions based on both date and tokens
   const filteredTransactions = useMemo(() => {

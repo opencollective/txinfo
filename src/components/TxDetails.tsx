@@ -9,6 +9,7 @@ import chains from "@/chains.json";
 import { decomposeURI } from "@/lib/utils";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import Link from "next/link";
 
 export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
   const { chainId, txHash } = decomposeURI(uri);
@@ -47,28 +48,37 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Transaction Hash</div>
-          <CopyableValue value={txHash ?? ""} />
-        </div>
+        <div className="flex flex-row gap-4">
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Transaction Hash</div>
+            <CopyableValue value={txHash ?? ""} truncate />
+          </div>
 
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Token</div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{token?.name}</span>
-            <a
-              href={`${chainConfig?.explorer_url}/token/${token.address}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-underline"
-            >
-              <Badge
-                variant="secondary"
-                className="hover:bg-secondary/80 cursor-pointer"
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Token</div>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/${chain}/token/${token?.address}`}
+                title={`View ${token?.symbol} token on TxInfo`}
               >
-                {token?.symbol} <ExternalLink className="h-3 w-3 ml-1 inline" />
-              </Badge>
-            </a>
+                <span className="text-lg">{token?.name}</span>
+              </Link>
+              <a
+                href={`${chainConfig?.explorer_url}/token/${token.address}`}
+                target="_blank"
+                title={`View ${token?.symbol} token on ${chainConfig?.explorer_name}`}
+                rel="noopener noreferrer"
+                className="no-underline"
+              >
+                <Badge
+                  variant="secondary"
+                  className="hover:bg-secondary/80 cursor-pointer"
+                >
+                  {token?.symbol}{" "}
+                  <ExternalLink className="h-3 w-3 ml-1 inline" />
+                </Badge>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -96,6 +106,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
                       <div className="flex items-center gap-2 mb-2 cursor-pointer">
                         <div className="flex-1 flex items-center gap-2">
                           <Badge>{event.name}</Badge>
+                          Contract address:
                           <CopyableValue
                             value={event.address}
                             truncate
@@ -105,7 +116,10 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
                       </div>
                       <div className="grid gap-1">
                         {Object.entries(event.args).map(([key, value]) => (
-                          <div key={key} className="flex flex-row">
+                          <div
+                            key={key}
+                            className="flex flex-row text-xs sm:text-sm"
+                          >
                             <div className="text-muted-foreground truncate mr-2">
                               {key}:
                             </div>

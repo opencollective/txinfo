@@ -53,8 +53,8 @@ export default function Metadata({ uri }: { uri: URI }) {
           />
         )}
         {!isEditing && (
-          <div className="group relative flex flex-row items-center">
-            <p className="mt-1 text-sm font-bold pr-2">{description}</p>
+          <div className="group relative flex flex-row items-center ">
+            <p className="mt-1 text-base pr-2">{description}</p>
             <TagsList tags={tags} />
             <button
               onClick={() => setIsEditing(true)}
