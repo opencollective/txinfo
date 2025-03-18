@@ -98,8 +98,8 @@ export default function Home() {
       {/* Features Section */}
       <section className="py-4 md:py-8 px-4 md:px-8 sm:px-4">
         <div className="max-w-2xl mx-auto">
-          <div className="flex flex-row gap-4">
-            <Card className="p-6 shadow-none w-1/3">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Card className="p-6 shadow-none w-full sm:w-1/3">
               <h3 className="text-lg font-medium mb-2">🤝 Collaborative</h3>
               <p className="text-muted-foreground">
                 Anyone can contribute metadata to any blockchain transaction or
@@ -107,14 +107,14 @@ export default function Home() {
               </p>
             </Card>
 
-            <Card className="p-6 shadow-none w-1/3">
+            <Card className="p-6 shadow-none w-full sm:w-1/3">
               <h3 className="text-lg font-medium mb-2">🌐 Decentralized</h3>
               <p className="text-muted-foreground">
                 No single server, data is distributed across Nostr relays.
               </p>
             </Card>
 
-            <Card className="p-6 shadow-none w-1/3">
+            <Card className="p-6 shadow-none w-full sm:w-1/3">
               <h3 className="text-lg font-medium mb-2">🔌 Easy to integrate</h3>
               <p className="text-muted-foreground">
                 Simple API to post or listen to metadata updates via Nostr.
