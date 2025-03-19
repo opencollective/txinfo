@@ -9,16 +9,20 @@ import { Suspense } from "react";
 
 const FEATURED_ACCOUNTS = [
   {
-    name: "Vitalik.eth on Ethereum",
-    uri: "ethereum/address/vitalik.eth",
+    name: "Citizen Spring / commonshub.brussels",
+    path: "/gnosis/address/0x6fDF0AaE33E313d9C98D2Aa19Bcd8EF777912CBf",
   },
   {
     name: "Citizen Wallet Gitcoin EOA on Polygon",
-    uri: "polygon/address/0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
+    path: "/polygon/address/0x20451461D5b609C5a3256d78F64c4Afee860Dc32",
   },
   {
     name: "Regens Unite Gitcoin on Celo",
-    uri: "celo/address/0x08e40e1C0681D072a54Fc5868752c02bb3996FFA",
+    path: "/celo/address/0x08e40e1C0681D072a54Fc5868752c02bb3996FFA",
+  },
+  {
+    name: "Vitalik.eth on Ethereum",
+    path: "/ethereum/address/vitalik.eth",
   },
 ];
 
@@ -129,10 +133,10 @@ export default function Home() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold mb-6">Examples</h2>
           <div className="grid gap-4">
-            {FEATURED_ACCOUNTS.map(({ name, uri }) => (
+            {FEATURED_ACCOUNTS.map(({ name, path }) => (
               <Link
-                key={uri}
-                href={`/${uri}`}
+                key={path}
+                href={path}
                 className="flex items-center justify-between p-4 rounded-lg border 
                   hover:bg-muted/50 active:bg-muted 
                   transition-colors cursor-pointer"
@@ -141,12 +145,12 @@ export default function Home() {
                   <div className="flex flex-col">
                     <span className="font-medium">{name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {uri.indexOf("0x") > 0
-                        ? uri.replace(
+                      {path.indexOf("0x") > 0
+                        ? path.replace(
                             /0x.{40}/,
-                            truncateAddress(uri.split("/")[2] as Address)
+                            truncateAddress(path.split("/")[3] as Address)
                           )
-                        : uri}
+                        : path}
                     </span>
                   </div>
                 </div>

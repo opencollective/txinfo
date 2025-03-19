@@ -72,6 +72,7 @@ export default function Transactions({
   const [txsPerPage, setTxsPerPage] = useState(LIMIT_PER_PAGE);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
+  const { subscribeToNotesByURI } = useNostr();
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
     dateRange: {
       start: null,
@@ -164,12 +165,14 @@ export default function Transactions({
       : [];
   }, [transactions, transactionsFilter, accountAddress]);
 
-  const currentPageTxs = useMemo(() => {
-    return filteredTransactions.slice(
-      (currentPage - 1) * txsPerPage,
-      currentPage * txsPerPage
-    );
-  }, [filteredTransactions, currentPage, txsPerPage]);
+  const currentPageTxs = useMemo(
+    () =>
+      filteredTransactions.slice(
+        (currentPage - 1) * txsPerPage,
+        currentPage * txsPerPage
+      ),
+    [filteredTransactions, currentPage, txsPerPage]
+  );
 
   useEffect(() => {
     // const cachedTransactions = getItem(
@@ -211,13 +214,16 @@ export default function Transactions({
     setTransactions((prev) => [...newTransactions, ...prev]);
   }, [newTransactions]);
 
-  // Subscribe to notes for all transactions at once
-  const { subscribeToNotesByURI } = useNostr();
-
   // Subscribe to notes for all displayed transactions
   useEffect(() => {
     const uris = new Set<URI>();
     currentPageTxs.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
+      uris.add(
+        generateURI("ethereum", {
+          chainId: chainConfig.id,
+          address: tx.token?.address,
+        })
+      );
       uris.add(
         generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
       );

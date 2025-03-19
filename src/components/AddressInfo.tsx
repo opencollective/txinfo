@@ -5,13 +5,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import chains from "../chains.json";
 import { ExternalLink, Edit } from "lucide-react";
 import CopyableValue from "./CopyableValue";
-import { Tag } from "@/components/ui/tag";
 import { useNostr } from "@/providers/NostrProvider";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import { getENSNameFromAddress } from "@/utils/crypto.server";
 import { generateURI } from "@/lib/utils";
 import type { URI, Address } from "@/types";
+import TagsList from "./TagsList";
+import TagValue from "./TagValue";
 
 export default function AddressInfo({
   chain,
@@ -59,10 +60,6 @@ export default function AddressInfo({
     setIsEditing(false);
   };
 
-  const tags =
-    latestNote?.tags.filter((t) => t[0] === "t").map((tag) => `#${tag[1]}`) ||
-    [];
-
   return (
     <Card>
       <CardHeader>
@@ -81,13 +78,6 @@ export default function AddressInfo({
             ) : (
               <div className="group relative flex flex-row items-center">
                 <span className="pr-2">{addressName}</span>
-                {!isEditing && tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 my-2">
-                    {tags.map((tag) => (
-                      <Tag key={tag} value={tag} />
-                    ))}
-                  </div>
-                )}
 
                 <button
                   onClick={() => {
@@ -104,27 +94,32 @@ export default function AddressInfo({
                 </button>
               </div>
             )}
-            <div className="flex flex-row items-center">
-              <CopyableValue
-                value={address}
-                className="text-xs bg-transparent"
-                truncate
-              />
-              <a
-                href={`${chainConfig?.explorer_url}/${addressType}/${address}`}
-                target="_blank"
-                title={`View on ${chainConfig?.explorer_name}`}
-                rel="noopener noreferrer"
-                className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </div>
           </div>
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-6"></CardContent>
+      <CardContent className="space-y-6">
+        <p>
+          <TagValue note={latestNote} kind="about" />
+        </p>
+        <div className="flex flex-row items-center">
+          <TagsList tags={latestNote?.tags} kinds={["t", "website"]} />
+          <CopyableValue
+            value={address}
+            className="text-xs bg-transparent"
+            truncate
+          />
+          <a
+            href={`${chainConfig?.explorer_url}/${addressType}/${address}`}
+            target="_blank"
+            title={`View on ${chainConfig?.explorer_name}`}
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      </CardContent>
     </Card>
   );
 }

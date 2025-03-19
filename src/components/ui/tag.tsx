@@ -18,7 +18,7 @@ function stringToColor(str: string): string {
 }
 
 export function Tag({ className, value, ...props }: TagProps) {
-  const [match, kind, val] = value.match(/^([a-z]+):(.*)$/) || [];
+  const [match, kind, val] = value.match(/^([a-z0-9_]+):(.*)$/i) || [];
 
   if (!match) {
     return <SimpleTag value={value} className={className} {...props} />;
@@ -79,10 +79,10 @@ function ComboTag({
 
   if (kind === "picture") {
     tagValue = (
-      <div className="group inline-block overflow-visible">
+      <div className="group/picture inline-block overflow-visible">
         <Image className="w-4 h-4" />
         {/* Thumbnail preview on hover */}
-        <div className="absolute hidden group-hover:block z-50 top-[30px] left-0 p-1 bg-white dark:bg-gray-800 rounded shadow-lg">
+        <div className="absolute hidden group-hover/picture:block z-50 top-[30px] left-0 p-1 bg-white dark:bg-gray-800 rounded shadow-lg">
           <img
             src={value}
             alt="Thumbnail"

@@ -25,8 +25,6 @@ export default function EditMetadataForm({
   });
   const { publishMetadata, notesByURI } = useNostr();
 
-  // Extract hashtags from description and return both tags and cleaned description
-
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log(">>> handleFormSubmit: formData", formData);
@@ -80,7 +78,7 @@ export default function EditMetadataForm({
   if (tags) {
     let tagsString = "";
     tags
-      .filter((t) => t[0] != "i" && t[0] != "k")
+      .filter((t) => t[0] != "i" && t[0] != "k" && t[1].split(" ").length === 1)
       .map((t) => {
         tagsString += t[0] == "t" ? `#${t[1]} ` : `#${t[0]}:${t[1]} `;
       });

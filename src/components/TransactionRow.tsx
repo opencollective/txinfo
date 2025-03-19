@@ -165,7 +165,7 @@ export function TransactionRow({
   return (
     <div className="space-y-4" key={tx.txHash}>
       {/* Main Transaction Info */}
-      <div className="flex items-center gap-4 flex-row">
+      <div className="flex items-start gap-4 flex-row">
         {/* Avatars */}
         <div className="relative">
           <Avatar
@@ -249,7 +249,7 @@ export function TransactionRow({
           {/* Timestamp and Tags - Only show when not editing */}
           {!isEditing && (
             <div className="flex items-center justify-between gap-4 text-sm">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <Link
                   href={`/${chain}/tx/${tx.txHash}`}
                   title={formatTimestamp(
@@ -306,7 +306,14 @@ export function TransactionRow({
               <User className="h-5 w-5" />
               Edit Profile
             </DialogTitle>
-            <DialogDescription>{currentAddress}</DialogDescription>
+            <DialogDescription>
+              <Link
+                href={`/${chain}/address/${currentAddress}`}
+                title="View address on TxInfo"
+              >
+                {currentAddress}
+              </Link>
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleProfileSubmit}>
