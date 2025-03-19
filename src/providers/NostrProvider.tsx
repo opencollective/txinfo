@@ -270,7 +270,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     // Use the last 2 characters of the hash for better distribution
     const hash = uri.split(":").pop() || "";
     const lastTwoChars = hash.slice(-2);
-    return parseInt(lastTwoChars, 16) % 20;
+    return parseInt(lastTwoChars, 16) % 10;
   };
 
   const createNewSubscription = useCallback(
