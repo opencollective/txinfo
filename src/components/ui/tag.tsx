@@ -58,23 +58,6 @@ function ComboTag({
   // Generate colors based on the kind and value
   const kindColor = stringToColor(kind);
 
-  // Determine if the value is numeric
-  const isNumeric = /^\d+(\.\d+)?$/.test(value);
-
-  // Choose color for value based on content
-  let valueColor: string;
-
-  if (isNumeric) {
-    const num = parseFloat(value);
-    if (num > 0) valueColor = "hsl(120, 70%, 85%)"; // Green for positive
-    else if (num < 0) valueColor = "hsl(0, 70%, 85%)"; // Red for negative
-    else valueColor = "hsl(200, 70%, 85%)"; // Blue for zero
-  } else {
-    valueColor = stringToColor(value);
-  }
-
-  valueColor = "rgba(0, 0, 0, 0.05)";
-
   let tagValue: React.ReactNode | string = value;
 
   if (kind === "picture") {
@@ -113,12 +96,8 @@ function ComboTag({
         {kind}
       </span>
       <span
-        className="px-2 py-1 rounded-r-md ring-1 ring-inset ring-muted-foreground/20 overflow-hidden text-ellipsis h-6 max-w-40"
+        className="px-2 py-1 rounded-r-md ring-1 ring-inset ring-muted-foreground/20 dark:ring-white/80 overflow-hidden text-ellipsis h-6 max-w-40 bg-black/5 dark:text-white"
         title={value}
-        style={{
-          backgroundColor: valueColor,
-          color: "black",
-        }}
       >
         {tagValue}
       </span>
