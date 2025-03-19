@@ -91,13 +91,9 @@ const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(
           <div className="flex flex-row gap-2 items-center">
             <div className="mt-1">
               <span className="font-medium">{user.name}</span>{" "}
-              <span className="text-muted-foreground">{getActionText()}</span>
+              <span className="text-muted-foreground">{getActionText()}</span>{" "}
+              {description && <span className="">{description}</span>}
             </div>
-            {description && (
-              <div className="mt-2 rounded-md border border-muted-foreground/20 bg-muted/10 p-2 text-sm">
-                {description}
-              </div>
-            )}
           </div>
           {tags && tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">

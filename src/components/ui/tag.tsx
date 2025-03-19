@@ -1,5 +1,6 @@
 import React from "react";
-import { cn } from "@/lib/utils";
+import { cn, isUrl } from "@/lib/utils";
+import { Image } from "lucide-react";
 
 interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
   value: string;
@@ -72,33 +73,32 @@ function ComboTag({
     valueColor = stringToColor(value);
   }
 
+  valueColor = "rgba(0, 0, 0, 0.05)";
+
+  let tagValue: React.ReactNode | string = value;
+
   if (kind === "picture") {
-    return (
-      <div
-        className="flex flex-col items-center gap-0 rounded-md overflow-hidden ring-1 ring-inset ring-muted-foreground/20"
-        style={{
-          backgroundColor: kindColor,
-          color: "black",
-        }}
-      >
-        <div className="w-full text-center px-2 py-1">{kind}</div>
-        <div
-          className={cn(
-            "max-w-24 inline-flex items-center rounded-md text-xs font-medium",
-            className
-          )}
-          {...props}
-        >
-          <img src={value} alt={value} />
-        </div>{" "}
+    tagValue = (
+      <div className="group inline-block overflow-visible">
+        <Image className="w-4 h-4" />
+        {/* Thumbnail preview on hover */}
+        <div className="absolute hidden group-hover:block z-50 top-[30px] left-0 p-1 bg-white dark:bg-gray-800 rounded shadow-lg">
+          <img
+            src={value}
+            alt="Thumbnail"
+            className="max-w-[200px] max-h-[200px] object-contain"
+          />
+        </div>
       </div>
     );
+  } else if (isUrl(value)) {
+    tagValue = <a href={value}>{value.replace(/^https?:\/\/(www\.)?/, "")}</a>;
   }
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md text-xs font-medium",
+        "relative inline-flex items-center rounded-md text-xs font-medium",
         className
       )}
       {...props}
@@ -113,13 +113,14 @@ function ComboTag({
         {kind}
       </span>
       <span
-        className="px-2 py-1 rounded-r-md ring-1 ring-inset ring-muted-foreground/20"
+        className="px-2 py-1 rounded-r-md ring-1 ring-inset ring-muted-foreground/20 overflow-hidden text-ellipsis h-6 max-w-40"
+        title={value}
         style={{
           backgroundColor: valueColor,
           color: "black",
         }}
       >
-        {value}
+        {tagValue}
       </span>
     </span>
   );

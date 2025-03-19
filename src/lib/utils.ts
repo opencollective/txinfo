@@ -90,6 +90,15 @@ export function getNpubFromPubkey(
   return npub;
 }
 
+export function isUrl(value: string) {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getTxInfoUrlFromURI(uri?: string) {
   if (!uri) return null;
   const parts = uri.split(":");
