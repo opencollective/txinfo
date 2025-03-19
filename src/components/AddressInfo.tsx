@@ -102,7 +102,7 @@ export default function AddressInfo({
         <p>
           <TagValue note={latestNote} kind="about" />
         </p>
-        <div className="flex flex-row items-center">
+        <div className="flex flex-wrap items-center gap-2">
           <TagsList tags={latestNote?.tags} kinds={["t", "website"]} />
           <CopyableValue
             value={address}

@@ -21,9 +21,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Check, X, Coins } from "lucide-react";
+import { Check, Coins } from "lucide-react";
 import type { Address, Token, Transaction } from "@/types/index.d.ts";
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, startOfToday } from "date-fns";
@@ -357,47 +356,6 @@ export default function Filters({
             </PopoverContent>
           </Popover>
         </>
-      )}
-
-      {/* Selected Token Badges */}
-      {selectedTokens.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedTokens.map((token) => (
-            <Badge
-              key={token.address}
-              variant="secondary"
-              className="flex items-center gap-1"
-            >
-              {token.symbol} ({truncateAddress(token.address)})
-              <button
-                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    updateSelectedTokens(
-                      selectedTokens.filter((t) => t !== token)
-                    );
-                  }
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  updateSelectedTokens(
-                    selectedTokens.filter((t) => t !== token)
-                  );
-                }}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-          {selectedTokens.length > 0 && (
-            <button
-              className="text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => updateSelectedTokens([])}
-            >
-              Clear all
-            </button>
-          )}
-        </div>
       )}
     </div>
   );

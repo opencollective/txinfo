@@ -259,16 +259,14 @@ export default function Transactions({
       />
 
       {/* Stats Cards */}
-      <StatsCards
-        accountAddress={accountAddress as Address}
-        transactions={filteredTransactions}
-        tokens={
-          transactionsFilter.selectedTokens.length > 0
-            ? transactionsFilter.selectedTokens
-            : availableTokens
-        }
-        timeRangeLabel={transactionsFilter.dateRange.label}
-      />
+      {transactionsFilter.selectedTokens.length > 0 && (
+        <StatsCards
+          accountAddress={accountAddress as Address}
+          transactions={filteredTransactions}
+          tokens={transactionsFilter.selectedTokens}
+          timeRangeLabel={transactionsFilter.dateRange.label}
+        />
+      )}
 
       {skippedTransactions > 0 && (
         <div className="text-sm text-muted-foreground">
