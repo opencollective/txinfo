@@ -319,7 +319,7 @@ export default function Filters({
                     {availableTokens.map((token) => (
                       <CommandItem
                         key={token.address}
-                        value={token.address}
+                        value={`${token.symbol} ${token.address}`}
                         className="cursor-pointer"
                         onSelect={() => {
                           if (selectedTokens.includes(token)) {
