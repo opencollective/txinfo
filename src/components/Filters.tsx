@@ -299,7 +299,7 @@ export default function Filters({
       )}
 
       {/* Token Filter */}
-      {availableTokens.length > 0 && (
+      {availableTokens.length > 1 && (
         <>
           <Popover open={tokenSelectOpen} onOpenChange={setTokenSelectOpen}>
             <PopoverTrigger asChild>

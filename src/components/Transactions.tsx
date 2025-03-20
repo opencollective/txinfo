@@ -247,7 +247,12 @@ export default function Transactions({
   }
 
   const totalPages = Math.ceil(filteredTransactions.length / txsPerPage);
-
+  const selectedTokens =
+    transactionsFilter.selectedTokens.length > 0
+      ? transactionsFilter.selectedTokens
+      : availableTokens.length === 1
+      ? availableTokens
+      : [];
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -259,11 +264,11 @@ export default function Transactions({
       />
 
       {/* Stats Cards */}
-      {transactionsFilter.selectedTokens.length > 0 && (
+      {selectedTokens.length > 0 && (
         <StatsCards
           accountAddress={accountAddress as Address}
           transactions={filteredTransactions}
-          tokens={transactionsFilter.selectedTokens}
+          tokens={selectedTokens}
           timeRangeLabel={transactionsFilter.dateRange.label}
         />
       )}
