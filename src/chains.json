@@ -72,6 +72,7 @@
   "arbitrum": {
     "id": 42161,
     "explorer_url": "https://arbiscan.io",
+    "explorer_api": "https://api.arbiscan.io",
     "explorer_name": "Arbiscan",
     "rpc": [
       "https://arbitrum.drpc.org",
