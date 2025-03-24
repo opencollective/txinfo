@@ -5,7 +5,7 @@ let cache: Record<string, EtherscanResponse> = {};
 
 setInterval(() => {
   cache = {};
-}, 1000 * 180); // empty cache every 3 minutes
+}, 1000 * 60); // empty cache every minute
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

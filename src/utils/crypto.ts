@@ -328,13 +328,12 @@ export async function processBlockRange(
 ): Promise<Transaction[]> {
   const key =
     `${chain}:${address}[${fromBlock}-${toBlock}]-processed`.toLowerCase();
-  const cached = localStorage.getItem(key);
-  // @ts-expect-error useCache is not defined in the window object
-  if (cached && (!window.useCache || window.useCache !== false)) {
-    const res = JSON.parse(cached);
-    res.cached = true;
-    return res;
-  }
+  // const cached = localStorage.getItem(key);
+  // if (cached && (!window.useCache || window.useCache !== false)) {
+  //   const res = JSON.parse(cached);
+  //   res.cached = true;
+  //   return res;
+  // }
   localStorage.removeItem(key); // remove previous cache
 
   const txs = await getBlockRange(chain, address, fromBlock, toBlock, provider);
@@ -354,7 +353,7 @@ export async function processBlockRange(
         };
       })
     );
-    setItem(key, JSON.stringify(newTxs));
+    // setItem(key, JSON.stringify(newTxs));
     return newTxs;
   } else {
     return [];
@@ -526,14 +525,14 @@ export async function getTransactionsFromEtherscan(
   address?: string,
   tokenAddress?: string
 ): Promise<null | Transaction[]> {
-  const today = new Date().toISOString().split("T")[0].replace(/-/g, "");
-  const key = `${chain}:${address}${
-    tokenAddress ? `:${tokenAddress}` : ""
-  }[0-${today}]`.toLowerCase();
-  const cached = localStorage.getItem(key);
-  if (cached) {
-    return JSON.parse(cached);
-  }
+  // const today = new Date().toISOString().split("T")[0].replace(/-/g, "");
+  // const key = `${chain}:${address}${
+  //   tokenAddress ? `:${tokenAddress}` : ""
+  // }[0-${today}]`.toLowerCase();
+  // const cached = localStorage.getItem(key);
+  // if (cached) {
+  //   return JSON.parse(cached);
+  // }
 
   const params = new URLSearchParams({
     chain,
@@ -589,7 +588,7 @@ export async function getTransactionsFromEtherscan(
           symbol: tx.tokenSymbol,
         },
       }));
-      setItem(key, JSON.stringify(res));
+      // setItem(key, JSON.stringify(res));
       return res;
     } else {
       console.log(">>> error from /api/etherscan", data);
