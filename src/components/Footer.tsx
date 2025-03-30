@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="mt-16 py-12 px-4 md:px-8 border-t border-border/40 text-sm bg-muted/20 text-center justify-center">
       <div className="max-w-2xl mx-auto flex flex-col sm:flex-row justify-center items-center gap-6 text-muted-foreground">
         <a
-          href="https://github.com/xdamman/txinfo"
+          href="https://github.com/opencollective/txinfo"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors duration-200 hover:scale-105"

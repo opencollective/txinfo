@@ -78,7 +78,7 @@ export default function Home() {
             A new Nostr user will be automatically created and saved in your
             local storage. <br />
             Questions? Feedback? Please{" "}
-            <a href="https://github.com/xdamman/txinfo/issues">
+            <a href="https://github.com/opencollective/txinfo/issues">
               create an issue on Github
             </a>{" "}
             or reach out on{" "}
