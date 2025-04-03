@@ -9,11 +9,11 @@ export default function LatestNotes() {
     limit: 10,
   });
 
-  console.log(">>> latestNotes", latestNotes);
   if (!latestNotes || latestNotes.length === 0) return null;
+
   return (
     <div>
-      <NotesList profiles={{}} notes={latestNotes.slice(0, 10)} />
+      <NotesList notes={latestNotes.slice(0, 10)} />
     </div>
   );
 }

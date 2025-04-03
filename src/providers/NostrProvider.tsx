@@ -22,7 +22,9 @@ import relays from "@/relays.json";
 import { decode, nsecEncode, npubEncode } from "nostr-tools/nip19";
 import { db } from "@/services/db";
 import { insertEventIntoDescendingList } from "nostr-tools/utils";
-import { URI } from "@/types";
+import { ProfileData, URI } from "@/types";
+import { NostrUserBox } from "@/components/NostrUserBox";
+import NostrEditProfileModal from "@/components/NostrEditProfileModal";
 
 export type NostrNote = {
   id: string;
@@ -62,6 +64,7 @@ interface NostrContextType {
     limit?: number;
   }) => void;
   subscribeToProfiles: (pubkeys: string[]) => void;
+  openEditProfileModal: (uri: URI, profile?: ProfileData) => void;
   updateProfile: ({
     name,
     about,
@@ -133,6 +136,11 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   const latestNotesSubscriptionRef = useRef<RelaySubscription>(null);
   const notesById = useRef<Record<string, NostrEvent>>({});
   const [latestNotes, setLatestNotes] = useState<NostrEvent[]>([]);
+  const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
+  const [currentProfileURI, setCurrentProfileURI] = useState<URI | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<ProfileData | undefined>(
+    undefined
+  );
   const subRef = useRef<RelaySubscription[]>([]);
   const profilesSubscriptionsRef = useRef<RelaySubscription | undefined>(null);
   const subscribedURIs = useRef<Record<URI, number>>({});
@@ -237,10 +245,6 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (newPubkeys.length === 0) return;
-      console.log(
-        ">>> NostrProvider subscribeToProfiles: newPubkeys",
-        newPubkeys
-      );
 
       // Subscribing to new URIs
       subscribedProfiles.current = [
@@ -250,14 +254,27 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
       profilesSubscriptionsRef.current = pool?.subscribeMany(
         relays,
-        [{ kinds: [0], authors: subscribedProfiles.current }],
+        [
+          // Get the most recent profile event
+          {
+            kinds: [0],
+            authors: subscribedProfiles.current,
+            limit: 1,
+          },
+          // Also subscribe to new profile updates
+          {
+            kinds: [0],
+            authors: subscribedProfiles.current,
+            since: Math.floor(Date.now() / 1000),
+          },
+        ],
         {
           onevent: (event) => {
             const profile = JSON.parse(event.content) as NostrProfile;
-            setProfiles((prev) => {
-              prev[event.pubkey] = profile;
-              return prev;
-            });
+            setProfiles((prev) => ({
+              ...prev,
+              [event.pubkey]: profile,
+            }));
           },
         }
       );
@@ -369,6 +386,15 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     [pool, addNostrEventsToState]
   );
 
+  const openEditProfileModal = useCallback(
+    (uri: URI, profile?: ProfileData) => {
+      setCurrentProfile(profile);
+      setCurrentProfileURI(uri);
+      setEditProfileModalOpen(true);
+    },
+    []
+  );
+
   const publishMetadata = useCallback(
     async (
       uri: URI,
@@ -381,7 +407,11 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         kind: 1111,
         created_at: Math.floor(Date.now() / 1000),
         content,
-        tags: [["i", uri], ["k", getKindFromURI(uri)], ...tags],
+        tags: [
+          ["i", uri],
+          ["k", getKindFromURI(uri)],
+          ...tags.filter((t) => t[0] !== "i" && t[0] !== "k"),
+        ],
       };
 
       const signedEvent = await publishEvent(event, nsec);
@@ -440,6 +470,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       subscribeToProfiles,
       profiles,
       updateProfile,
+      openEditProfileModal,
       publishMetadata,
     }),
     [
@@ -452,6 +483,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       subscribeToProfiles,
       profiles,
       updateProfile,
+      openEditProfileModal,
       publishMetadata,
     ] // Include all dependencies
   );
@@ -494,16 +526,32 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   return (
     <NostrContext.Provider value={contextValue}>
       {children}
+      <NostrUserBox />
+      {currentProfileURI && (
+        <NostrEditProfileModal
+          open={editProfileModalOpen}
+          uri={currentProfileURI as URI}
+          profile={currentProfile}
+          onOpenChange={setEditProfileModalOpen}
+        />
+      )}
     </NostrContext.Provider>
   );
 }
 
 export const useProfile = (pubkey?: string) => {
   const context = useContext(NostrContext);
+  const nostr_pubkey = pubkey || getItem("nostr_pubkey");
+
+  useEffect(() => {
+    if (!context?.pool) return;
+    if (!nostr_pubkey) return;
+    context.subscribeToProfiles([nostr_pubkey]);
+  }, [nostr_pubkey, context]);
+
   if (!context) {
     throw new Error("useProfile must be used within NostrProvider");
   }
-  const nostr_pubkey = pubkey || getItem("nostr_pubkey");
   if (!nostr_pubkey) {
     console.log(">>> useProfile: Not logged in");
     return {
@@ -511,8 +559,6 @@ export const useProfile = (pubkey?: string) => {
       updateProfile: context.updateProfile,
     };
   }
-
-  context.subscribeToProfiles([nostr_pubkey]);
 
   return {
     profile: context.profiles[nostr_pubkey],
@@ -556,5 +602,6 @@ export const useNostr = () => {
     subscribeToNotesByURI: context.subscribeToNotesByURI,
     subscribeToLatestNotes: context.subscribeToLatestNotes,
     subscribeToProfiles: context.subscribeToProfiles,
+    openEditProfileModal: context.openEditProfileModal,
   };
 };

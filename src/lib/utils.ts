@@ -1,13 +1,47 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { formatInTimeZone } from "date-fns-tz";
-import { ChainConfig, URI } from "@/types";
+import { Address, ChainConfig, ProfileData, URI } from "@/types";
 import { npubEncode } from "nostr-tools/nip19";
 import chains from "@/chains.json";
+import { NostrNote } from "@/providers/NostrProvider";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
+
+export const generateAvatar = (address: string) => {
+  return `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`;
+};
+
+export const getAddressFromURI = (uri: string): Address => {
+  return uri.substring(uri.lastIndexOf(":") + 1) as Address;
+};
+
+export const getChainIdFromURI = (uri: string): number | undefined => {
+  if (uri && uri.startsWith("ethereum")) {
+    return parseInt(uri.split(":")[1]);
+  }
+  return undefined;
+};
+
+export const getProfileFromNote = (
+  note: NostrNote
+): ProfileData | undefined => {
+  if (note) {
+    const uri = note.tags.find((t) => t[0] === "i")?.[1];
+    if (!uri) return undefined;
+    const address = getAddressFromURI(uri);
+    return {
+      uri: uri as URI,
+      address,
+      name: note.content || "",
+      about: note.tags.find((t) => t[0] === "about")?.[1] || "",
+      picture: note.tags.find((t) => t[0] === "picture")?.[1] || "",
+      website: note.tags.find((t) => t[0] === "website")?.[1] || "",
+    };
+  }
+};
 
 export const formatNumber = (
   number: number,
@@ -121,8 +155,9 @@ export function extractHashtags(text: string): {
   cleanDescription: string;
 } {
   // Updated regex to match hashtags with simple values, key:attr format, and floating point numbers
-  const hashtagRegex = /#(\w+(?::\w+(?:\.\d+)?)?)/g;
+  const hashtagRegex = /#(\w+:(?:[^\s#]+)?|\w+)/g;
   const matches = text.match(hashtagRegex) || [];
+  console.log(">>> extractHashtags: matches", matches);
   const tags = matches.map((tag) => tag.substring(1)); // Remove the # symbol
 
   // Remove hashtags from the description
@@ -137,7 +172,7 @@ export function extractHashtags(text: string): {
 export function removeTagsFromContent(content: string): string {
   if (!content) return "";
   // Updated regex to match hashtags with simple values, key:attr format, and floating point numbers
-  const hashtagRegex = /#(\w+(?::\w+(?:\.\d+)?)?)/g;
+  const hashtagRegex = /#(\w+:(?:[^\s#]+)?|\w+)/g;
 
   // Remove hashtags from the description
   const cleanDescription = content

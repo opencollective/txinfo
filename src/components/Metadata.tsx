@@ -19,10 +19,8 @@ export interface Metadata {
 
 export default function Metadata({ uri }: { uri: URI }) {
   const [isEditing, setIsEditing] = useState(false);
-  const { subscribeToProfiles, profiles, notesByURI, subscribeToNotesByURI } =
-    useNostr();
+  const { notesByURI, subscribeToNotesByURI } = useNostr();
   subscribeToNotesByURI([uri]);
-  subscribeToProfiles((notesByURI[uri] || []).map((e) => e.pubkey));
 
   const latestNote =
     notesByURI[uri] && notesByURI[uri][notesByURI[uri].length - 1];
@@ -65,7 +63,7 @@ export default function Metadata({ uri }: { uri: URI }) {
           </div>
         )}
         <h2 className="text-2xl font-semibold mt-8">History</h2>
-        <NotesList profiles={profiles} notes={notesByURI[uri]} />
+        <NotesList notes={notesByURI[uri]} />
       </div>
     </div>
   );

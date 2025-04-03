@@ -89,3 +89,12 @@ export type ChainConfig = {
   rpc: string | string[];
   ws?: string | string[];
 };
+
+export type ProfileData = {
+  uri: URI;
+  address: Address | undefined;
+  name?: string;
+  about?: string;
+  picture?: string;
+  website?: string;
+};

@@ -27,7 +27,6 @@ export default function EditMetadataForm({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(">>> handleFormSubmit: formData", formData);
     if (!formData.description.trim()) return;
 
     setIsSubmitting(true);
@@ -38,7 +37,10 @@ export default function EditMetadataForm({
 
       const newTags = tags.map((tag) => {
         if (tag.includes(":")) {
-          return tag.split(":");
+          return [
+            tag.substring(0, tag.indexOf(":")),
+            tag.substring(tag.indexOf(":") + 1),
+          ];
         }
         return ["t", tag];
       });

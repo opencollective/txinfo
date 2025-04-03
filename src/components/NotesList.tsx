@@ -1,12 +1,15 @@
 import { Timeline, TimelineItem } from "@/components/ui/timeline";
 import { extractHashtags, getNpubFromPubkey } from "@/lib/utils";
-import { type NostrNote, type NostrProfile } from "@/providers/NostrProvider";
+import { useNostr, type NostrNote } from "@/providers/NostrProvider";
 interface Props {
   notes: NostrNote[];
-  profiles: Record<string, NostrProfile>;
 }
 
-export default function NotesList({ notes, profiles }: Props) {
+export default function NotesList({ notes }: Props) {
+  const { profiles, subscribeToProfiles } = useNostr();
+  const pubkeys = notes.map((note) => note.pubkey);
+  subscribeToProfiles(pubkeys);
+
   return (
     <Timeline>
       {notes?.length > 0 &&
