@@ -76,37 +76,44 @@ export function TransactionRow({
   const [toProfile, setToProfile] = useState<ProfileData>(defaultToProfile);
 
   useEffect(() => {
-    const fetchENSDetails = async (stateVar: string, address: Address) => {
+    const fetchENSDetails = async (address: Address) => {
       const ensDetails = await getENSDetailsFromAddress(address);
       if (ensDetails) {
-        if (stateVar === "from") {
-          setFromProfile({
-            uri: generateURI("ethereum", { chainId, address }),
-            address: address,
-            name: ensDetails.name,
-            picture: ensDetails.avatar,
-            website: ensDetails.url,
-            about: ensDetails.description,
-          });
-        } else if (stateVar === "to") {
-          setToProfile({
-            uri: generateURI("ethereum", { chainId, address }),
-            address: address,
-            about: ensDetails.description,
-            name: ensDetails.name,
-            picture: ensDetails.avatar,
-            website: ensDetails.url,
-          });
-        }
+        setFromProfile({
+          uri: fromProfile.uri,
+          address: tx.from,
+          name: ensDetails.name,
+          picture: ensDetails.avatar,
+          website: ensDetails.url,
+          about: ensDetails.description,
+        });
       }
     };
+
     if (!fromProfile.name) {
-      fetchENSDetails("from", tx.from);
+      fetchENSDetails(tx.from);
     }
+  }, [tx.from, fromProfile]);
+
+  useEffect(() => {
+    const fetchENSDetails = async (address: Address) => {
+      const ensDetails = await getENSDetailsFromAddress(address);
+      if (ensDetails) {
+        setFromProfile({
+          uri: toProfile.uri,
+          address: tx.to,
+          name: ensDetails.name,
+          picture: ensDetails.avatar,
+          website: ensDetails.url,
+          about: ensDetails.description,
+        });
+      }
+    };
+
     if (!toProfile.name) {
-      fetchENSDetails("to", tx.to);
+      fetchENSDetails(tx.to);
     }
-  }, [tx.from, tx.to, fromProfile.name, toProfile.name, chainId]);
+  }, [tx.to, toProfile]);
 
   if (!tx) {
     console.error("TransactionRow: tx is undefined");
