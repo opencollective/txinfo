@@ -22,8 +22,7 @@ export default function Metadata({ uri }: { uri: URI }) {
   const { notesByURI, subscribeToNotesByURI } = useNostr();
   subscribeToNotesByURI([uri]);
 
-  const latestNote =
-    notesByURI[uri] && notesByURI[uri][notesByURI[uri].length - 1];
+  const latestNote = notesByURI[uri] && notesByURI[uri][0];
 
   const inputRef = useRef<HTMLInputElement>(null);
   const description = removeTagsFromContent(latestNote?.content);

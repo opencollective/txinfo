@@ -7,6 +7,7 @@ interface Props {
 
 export default function NotesList({ notes }: Props) {
   const { profiles, subscribeToProfiles } = useNostr();
+  if (!notes) return null;
   const pubkeys = notes.map((note) => note.pubkey);
   subscribeToProfiles(pubkeys);
 
