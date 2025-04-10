@@ -525,14 +525,25 @@ export async function getTransactionsFromEtherscan(
   address?: string,
   tokenAddress?: string
 ): Promise<null | Transaction[]> {
-  // const today = new Date().toISOString().split("T")[0].replace(/-/g, "");
-  // const key = `${chain}:${address}${
-  //   tokenAddress ? `:${tokenAddress}` : ""
-  // }[0-${today}]`.toLowerCase();
-  // const cached = localStorage.getItem(key);
-  // if (cached) {
-  //   return JSON.parse(cached);
-  // }
+  const key = `${chain}:${address}${
+    tokenAddress ? `:${tokenAddress}` : ""
+  }`.toLowerCase();
+  const cached = localStorage.getItem(key);
+  if (cached) {
+    const cachedObject = JSON.parse(cached);
+    if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60) {
+      console.log(">>> getTransactionsFromEtherscan: cache hit", key);
+
+      return cachedObject.transactions;
+    } else if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60 * 24 * 7) {
+      // 7 days
+      // We return the cached transactions and update the cache
+      console.log(">>> getTransactionsFromEtherscan: updating cache", key);
+      localStorage.removeItem(key);
+      getTransactionsFromEtherscan(chain, address, tokenAddress);
+      return cachedObject.transactions;
+    }
+  }
 
   const params = new URLSearchParams({
     chain,
@@ -588,7 +599,10 @@ export async function getTransactionsFromEtherscan(
           symbol: tx.tokenSymbol,
         },
       }));
-      // setItem(key, JSON.stringify(res));
+      setItem(
+        key,
+        JSON.stringify({ transactions: res, timestamp: Date.now() })
+      );
       return res;
     } else {
       console.log(">>> error from /api/etherscan", data);
