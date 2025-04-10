@@ -82,13 +82,16 @@ export default function Transactions({
     type: "all",
     selectedTokens: [],
   });
-  const { transactions: newTransactions, skippedTransactions } =
-    useLiveTransactions({
-      chain,
-      tokenAddress,
-      accountAddress,
-      maxTransactionsPerMinute: 3,
-    });
+  const {
+    transactions: newTransactions,
+    skippedTransactions,
+    start,
+  } = useLiveTransactions({
+    chain,
+    tokenAddress,
+    accountAddress,
+    maxTransactionsPerMinute: 45,
+  });
   const [error, setError] = useState<string | null>(null);
 
   const chainConfig = chains[chain as keyof typeof chains];
@@ -200,6 +203,8 @@ export default function Transactions({
         if (transactions) {
           setTransactions(transactions);
         }
+        const fromBlock = transactions?.[0]?.blockNumber ?? 0;
+        start({ fromBlock: fromBlock + 1, websocket: false });
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching transactions:", error);
@@ -208,7 +213,7 @@ export default function Transactions({
     };
 
     fetchPastTransactions();
-  }, [accountAddress, chain, tokenAddress]);
+  }, [accountAddress, chain, tokenAddress, start]);
 
   useEffect(() => {
     setTransactions((prev) => [...newTransactions, ...prev]);
