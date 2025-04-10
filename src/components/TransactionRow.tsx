@@ -93,13 +93,13 @@ export function TransactionRow({
     if (!fromProfile.name) {
       fetchENSDetails(tx.from);
     }
-  }, [tx.from, fromProfile]);
+  }, [tx.from, fromProfile.name, fromProfile.uri]);
 
   useEffect(() => {
     const fetchENSDetails = async (address: Address) => {
       const ensDetails = await getENSDetailsFromAddress(address);
       if (ensDetails) {
-        setFromProfile({
+        setToProfile({
           uri: toProfile.uri,
           address: tx.to,
           name: ensDetails.name,
@@ -113,7 +113,7 @@ export function TransactionRow({
     if (!toProfile.name) {
       fetchENSDetails(tx.to);
     }
-  }, [tx.to, toProfile]);
+  }, [tx.to, toProfile.name, toProfile.uri]);
 
   if (!tx) {
     console.error("TransactionRow: tx is undefined");
