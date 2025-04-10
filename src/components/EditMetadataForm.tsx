@@ -35,16 +35,6 @@ export default function EditMetadataForm({
       // Extract hashtags and clean description
       const { tags, cleanDescription } = extractHashtags(formData.description);
 
-      const newTags = tags.map((tag) => {
-        if (tag.includes(":")) {
-          return [
-            tag.substring(0, tag.indexOf(":")),
-            tag.substring(tag.indexOf(":") + 1),
-          ];
-        }
-        return ["t", tag];
-      });
-
       const previousNote = notesByURI[uri]
         ? notesByURI[uri][notesByURI[uri].length - 1]
         : { tags: [] };
@@ -54,9 +44,9 @@ export default function EditMetadataForm({
         tags: [
           // Make sure we don't duplicate tags
           ...previousNote?.tags.filter(
-            (t) => ["i", ...newTags.map((nt) => nt[0])].indexOf(t[0]) === -1
+            (t) => ["i", ...tags.map((nt) => nt[0])].indexOf(t[0]) === -1
           ),
-          ...newTags,
+          ...tags,
         ],
       });
       onCancel?.();
@@ -80,9 +70,17 @@ export default function EditMetadataForm({
   if (tags) {
     let tagsString = "";
     tags
-      .filter((t) => t[0] != "i" && t[0] != "k" && t[1].split(" ").length === 1)
+      .filter((t) => t[0] != "i" && t[0] != "k")
       .map((t) => {
-        tagsString += t[0] == "t" ? `#${t[1]} ` : `#${t[0]}:${t[1]} `;
+        if (t[0] == "t") {
+          tagsString += `#${t[1]} `;
+        } else {
+          if (t[1].split(" ").length > 1) {
+            tagsString += `#[${t[0]}:${t[1]}] `;
+          } else {
+            tagsString += `#${t[0]}:${t[1]} `;
+          }
+        }
       });
 
     defaultValue = `${content} ${tagsString}`;

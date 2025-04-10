@@ -150,15 +150,16 @@ export function getTxInfoUrlFromURI(uri?: string) {
   return res;
 }
 
+// Extract hashtags from a text string
+// 1. #[kind:value with spaces] format
+// 2. #simpletag
+// 3. #key:attr format without spaces
 export function extractHashtags(text: string): {
-  tags: string[];
+  tags: string[][];
   cleanDescription: string;
 } {
-  // Updated regex to match hashtags with simple values, key:attr format, and floating point numbers
-  const hashtagRegex = /#(\w+:(?:[^\s#]+)?|\w+)/g;
+  const hashtagRegex = /#(?:\[(\w+:[^\]]+)\]|(\w+:(?:[^\s#]+)?|\w+))/g;
   const matches = text.match(hashtagRegex) || [];
-  console.log(">>> extractHashtags: matches", matches);
-  const tags = matches.map((tag) => tag.substring(1)); // Remove the # symbol
 
   // Remove hashtags from the description
   const cleanDescription = text
@@ -166,13 +167,35 @@ export function extractHashtags(text: string): {
     .replace(/\s+/g, " ")
     .trim();
 
+  const tags = matches.map((tag) => {
+    // If the tag starts with #[, we need to extract the content within brackets
+    if (tag.startsWith("#[")) {
+      const content = tag.slice(2, -1); // Remove #[ and ]
+      return [
+        content.substring(0, content.indexOf(":")),
+        content.substring(content.indexOf(":") + 1),
+      ];
+    }
+    // Handle regular tags
+    if (tag.includes(":")) {
+      return [
+        tag.substring(1, tag.indexOf(":")),
+        tag.substring(tag.indexOf(":") + 1),
+      ];
+    }
+    return ["t", tag.substring(1)];
+  });
+
   return { tags, cleanDescription };
 }
 
 export function removeTagsFromContent(content: string): string {
   if (!content) return "";
-  // Updated regex to match hashtags with simple values, key:attr format, and floating point numbers
-  const hashtagRegex = /#(\w+:(?:[^\s#]+)?|\w+)/g;
+  // Updated regex to match hashtags with:
+  // 1. [kind:value with spaces] format
+  // 2. simple values (word)
+  // 3. key:attr format without spaces
+  const hashtagRegex = /#(?:\[(\w+:[^\]]+)\]|(\w+:(?:[^\s#]+)?|\w+))/g;
 
   // Remove hashtags from the description
   const cleanDescription = content
