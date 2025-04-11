@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ethers } from "ethers";
 import Link from "next/link";
 import { Edit } from "lucide-react";
@@ -43,22 +43,25 @@ export function TransactionRow({
     }
   }, [isEditing]);
 
-  const getProfileForAddress = (address: Address): ProfileData => {
-    const uri = generateURI("ethereum", { chainId, address });
-    const defaultProfile = {
-      uri,
-      address: address || undefined,
-      name: "",
-      about: "",
-      picture: "",
-      website: "",
-    };
-    if (!address) return defaultProfile;
-    if (!notesByURI[uri]) return defaultProfile;
-    const profile = getProfileFromNote(notesByURI[uri][0]);
-    if (!profile) return defaultProfile;
-    return profile;
-  };
+  const getProfileForAddress = useCallback(
+    (address: Address): ProfileData => {
+      const uri = generateURI("ethereum", { chainId, address });
+      const defaultProfile = {
+        uri,
+        address: address || undefined,
+        name: "",
+        about: "",
+        picture: "",
+        website: "",
+      };
+      if (!address) return defaultProfile;
+      if (!notesByURI[uri]) return defaultProfile;
+      const profile = getProfileFromNote(notesByURI[uri][0]);
+      if (!profile) return defaultProfile;
+      return profile;
+    },
+    [chainId, notesByURI]
+  );
 
   const defaultFromProfile = getProfileForAddress(
     tx.from === "0x0000000000000000000000000000000000000000"
@@ -91,9 +94,14 @@ export function TransactionRow({
     };
 
     if (!fromProfile.name) {
-      fetchENSDetails(tx.from);
+      const profile = getProfileForAddress(tx.from);
+      if (profile.name) {
+        setFromProfile(profile);
+      } else {
+        fetchENSDetails(tx.from);
+      }
     }
-  }, [tx.from, fromProfile.name, fromProfile.uri]);
+  }, [tx.from, fromProfile.name, fromProfile.uri, getProfileForAddress]);
 
   useEffect(() => {
     const fetchENSDetails = async (address: Address) => {
@@ -111,9 +119,14 @@ export function TransactionRow({
     };
 
     if (!toProfile.name) {
-      fetchENSDetails(tx.to);
+      const profile = getProfileForAddress(tx.to);
+      if (profile.name) {
+        setToProfile(profile);
+      } else {
+        fetchENSDetails(tx.to);
+      }
     }
-  }, [tx.to, toProfile.name, toProfile.uri]);
+  }, [tx.to, toProfile.name, toProfile.uri, getProfileForAddress]);
 
   if (!tx) {
     console.error("TransactionRow: tx is undefined");

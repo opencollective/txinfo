@@ -110,22 +110,6 @@ const getKindFromURI = (uri: URI): string => {
   return `${blockchain}:${type}`;
 };
 
-const convertOldNostrEvent = (event: NostrEvent): NostrEvent => {
-  const oldURI = getURIFromNostrEvent(event);
-  const newURI = `ethereum:${oldURI}`;
-  const newEvent: NostrEvent = {
-    ...event,
-    id: "", // Will be set by finalizeEvent
-    sig: "", // Will be set by finalizeEvent
-    tags: [
-      ["i", newURI],
-      ["k", getKindFromURI(getURIFromNostrEvent(event) as URI)],
-      ...event.tags.filter((t) => t[0] !== "I"),
-    ],
-  };
-  return newEvent;
-};
-
 export function NostrProvider({ children }: { children: React.ReactNode }) {
   const [pool, setPool] = useState<SimplePool | null>(null);
   const [connectedRelays, setConnectedRelays] = useState<string[]>([]);
@@ -487,41 +471,6 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       publishMetadata,
     ] // Include all dependencies
   );
-
-  // Upgrade old events (deprecated)
-  useEffect(() => {
-    if (connectedRelays.length === 0) return;
-    const nsec = getItem("nostr_nsec") as string;
-    db?.getNostrEvents().then((events) => {
-      const oldEvents = events.filter(
-        (e) => !getURIFromNostrEvent(e)?.startsWith("ethereum:")
-      );
-      if (oldEvents.length === 0) return;
-      console.log(
-        ">>>",
-        oldEvents.length,
-        "notes need to be upgraded to the new format",
-        oldEvents
-      );
-      oldEvents.slice(0, 20).forEach(async (event) => {
-        const uri = getURIFromNostrEvent(event);
-        if (!uri) return;
-        if (uri.match(/^[0-9]+:/)) {
-          const newEvent = convertOldNostrEvent(event);
-          try {
-            const signedEvent = await publishEvent(newEvent, nsec);
-            if (signedEvent.id) {
-              db?.addNostrEvent(`ethereum:${uri}` as URI, signedEvent);
-              db?.deleteNostrEvent(event.id);
-              console.log(">>> Upgraded", event, newEvent);
-            }
-          } catch (error) {
-            console.error(">>> Error upgrading event", error, event, newEvent);
-          }
-        }
-      });
-    });
-  }, [publishEvent, connectedRelays.length]);
 
   return (
     <NostrContext.Provider value={contextValue}>

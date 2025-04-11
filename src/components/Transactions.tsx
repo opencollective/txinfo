@@ -239,8 +239,10 @@ export default function Transactions({
         generateURI("ethereum", { chainId: chainConfig.id, txHash: tx.txHash })
       );
     });
-
-    subscribeToNotesByURI(Array.from(uris) as URI[]);
+    const urisArray = Array.from(uris) as URI[];
+    if (urisArray.length > 0) {
+      subscribeToNotesByURI(urisArray);
+    }
   }, [currentPageTxs, chainConfig, subscribeToNotesByURI]);
 
   if (isLoading) {
@@ -290,7 +292,7 @@ export default function Transactions({
       {currentPageTxs.map((tx, idx) => {
         return (
           <TransactionRow
-            key={idx}
+            key={`${tx.txHash}-${idx}`}
             tx={tx}
             chain={chain}
             chainId={chainConfig.id}
