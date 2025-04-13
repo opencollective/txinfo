@@ -6,6 +6,7 @@ import { Address } from "@/types";
 import Image from "next/image";
 import LatestNotes from "@/components/LatestNotes";
 import { Suspense } from "react";
+import SearchForm from "@/components/SearchForm";
 
 const FEATURED_ACCOUNTS = [
   {
@@ -53,8 +54,8 @@ export default function Home() {
         <p className="text-xl text-muted-foreground mb-8">
           Add metadata to any blockchain transaction using Nostr
         </p>
-        <div className="max-w-2xl mx-auto">
-          {/* ... existing search component ... */}
+        <div className="max-w-2xl mx-auto py-6">
+          <SearchForm />
         </div>
       </section>
 
@@ -89,7 +90,7 @@ export default function Home() {
           </p>
           <div className="text-xs sm:text-sm rounded-md bg-muted p-2">
             ℹ️ Protip: Tap on the floating round button (bottom right) to add a
-            username and avatar or to use your own nsec.
+            username and avatar or to use your own Nostr private key (nsec).
           </div>
         </div>
       </section>
