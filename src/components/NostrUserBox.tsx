@@ -24,7 +24,15 @@ export function NostrUserBox() {
   useEffect(() => {
     const npub = localStorage.getItem("nostr_npub");
     setCurrentNpub(npub);
-  }, []);
+    const profileName = profile?.name || "";
+    if (profileName) {
+      setProfileName(profileName);
+    }
+    const profilePicture = profile?.picture || "";
+    if (profilePicture) {
+      setProfilePicture(profilePicture);
+    }
+  }, [profile?.name, profile?.picture]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

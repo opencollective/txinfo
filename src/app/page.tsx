@@ -88,13 +88,8 @@ export default function Home() {
             .
           </p>
           <div className="text-xs sm:text-sm rounded-md bg-muted p-2">
-            ℹ️ Protip: if you want to use your own <code>nsec</code>, just enter
-            in the console:
-            <div className="py-2">
-              <code className="text-xs">
-                localStorage.setItem(&quot;nostr_nsec&quot;, nsec)
-              </code>
-            </div>
+            ℹ️ Protip: Tap on the floating round button (bottom right) to add a
+            username and avatar or to use your own nsec.
           </div>
         </div>
       </section>
