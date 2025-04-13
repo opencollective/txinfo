@@ -6,7 +6,7 @@ Local first, decentralized and censorship resistant.
 
 ### How does it work?
 
-Every time you add metadata to a blockchain object (tx or address), it publishes a kind 1111 note with the following tags:
+Every time you add metadata to a blockchain object (tx or address), it publishes a Nostr note (kind 1111) with the following tags:
 
 ```json
 {
@@ -33,7 +33,7 @@ Where
 
 The frontend will automatically generate a new Nostr user unless a `nostr_nsec` key is present in the local storage (so if you want to use your own nsec, just enter `localStorage.setItem("nostr_nsec", nsec);` in the browser console).
 
-For more explanation about the required attributes for the Nostr note, see [NIP-22](https://github.com/nostr-protocol/nips/blob/master/22.md) and [NIP-73](https://github.com/nostr-protocol/nips/blob/master/73.md).
+For more explanation about the required attributes for the Nostr note, see [NIP-73](https://github.com/nostr-protocol/nips/blob/master/73.md).
 
 To add metadata about an address:
 
@@ -54,6 +54,25 @@ To add metadata about an address:
   ]
 }
 ```
+
+## How to integrate in your own app?
+
+Take a look at [nostr-tools](https://github.com/nbd-wtf/nostr-tools).
+You basically just need to subscribe to any URI of a given transaction, account address or token address (using the "i" tag). You will then receive all the notes from the relays related to that object.
+
+See also this integration example: https://github.com/CommonsHub/token-bot/blob/main/src/lib/nostr.ts
+
+## Installation
+
+```
+npm install
+cp .env.example .env
+vim .env // i.e. edit this file
+npm run dev
+```
+
+You can create a free Etherscan api key on the etherscan website (one per chain).
+Only required to speed up populating transactions (copy `.env.example` to `.env`).
 
 ## Frontend use
 
@@ -93,15 +112,3 @@ const tags = [
 publishMetadata(uri, { content, tags });
 ```
 
-
-## Installation
-
-```
-npm install
-cp .env.example .env
-vim .env // i.e. edit this file
-npm run dev
-```
-
-You can create a free Etherscan api key on the etherscan website (one per chain).
-Only required to speed up populating transactions (copy `.env.example` to `.env`).

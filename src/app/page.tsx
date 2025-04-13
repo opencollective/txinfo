@@ -117,7 +117,11 @@ export default function Home() {
             <Card className="p-6 shadow-none w-full sm:w-1/3">
               <h3 className="text-lg font-medium mb-2">🔌 Easy to integrate</h3>
               <p className="text-muted-foreground">
-                Simple API to post or listen to metadata updates via Nostr.
+                Simple API to post or listen to metadata updates via Nostr (
+                <a href="https://github.com/opencollective/txinfo">
+                  see readme
+                </a>
+                ).
               </p>
             </Card>
           </div>
