@@ -23,7 +23,14 @@ export function NostrUserBox() {
 
   useEffect(() => {
     const npub = localStorage.getItem("nostr_npub");
-    setCurrentNpub(npub);
+    if (npub) {
+      setCurrentNpub(npub);
+    } else {
+      const npub = profile?.npub;
+      if (npub) {
+        setCurrentNpub(npub);
+      }
+    }
     const profileName = profile?.name || "";
     if (profileName) {
       setProfileName(profileName);
@@ -32,7 +39,7 @@ export function NostrUserBox() {
     if (profilePicture) {
       setProfilePicture(profilePicture);
     }
-  }, [profile?.name, profile?.picture]);
+  }, [profile?.name, profile?.picture, profile?.npub]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -210,6 +217,7 @@ export function NostrUserBox() {
                 </div>
                 <div>
                   <div
+                    className="dark:text-black"
                     style={{
                       fontWeight: 500,
                       display: "flex",
@@ -280,6 +288,7 @@ export function NostrUserBox() {
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
                 placeholder="Enter name..."
+                className="dark:text-black"
                 style={{
                   width: "100%",
                   padding: "6px",
@@ -296,6 +305,7 @@ export function NostrUserBox() {
                 value={profilePicture}
                 onChange={(e) => setProfilePicture(e.target.value)}
                 placeholder="Profile picture URL..."
+                className="dark:text-black"
                 style={{
                   width: "100%",
                   padding: "6px",

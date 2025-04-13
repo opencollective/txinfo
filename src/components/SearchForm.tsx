@@ -20,7 +20,7 @@ const TYPES = [
 
 export default function SearchForm() {
   const router = useRouter();
-  const [currentType, setCurrentType] = useState("address");
+  const [currentType, setCurrentType] = useState("tx");
   const [currentChain, setCurrentChain] = useState("ethereum");
   const [currentValue, setCurrentValue] = useState("");
 
