@@ -204,7 +204,9 @@ export default function Transactions({
           setTransactions(transactions);
         }
         const fromBlock = transactions?.[0]?.blockNumber ?? 0;
-        start({ fromBlock: fromBlock + 1, websocket: false });
+        if (fromBlock > 0) {
+          start({ fromBlock: fromBlock + 1, websocket: false });
+        }
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching transactions:", error);

@@ -146,9 +146,10 @@ export function TransactionRow({
       <div className="flex items-start gap-4 flex-row">
         {/* Avatars */}
         <div className="relative">
-          <Avatar profile={fromProfile} />
+          <Avatar profile={fromProfile} editable={false} />
           <Avatar
             profile={toProfile}
+            editable={false}
             className="absolute -bottom-2 -right-2 h-8 w-8 border-2 border-gray-300 bg-white"
           />
         </div>

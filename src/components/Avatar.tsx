@@ -3,10 +3,18 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { generateAvatar, generateURI } from "@/lib/utils";
+import {
+  generateAvatar,
+  generateURI,
+  getAddressFromURI,
+  getChainIdFromURI,
+  getChainSlugFromChainId,
+} from "@/lib/utils";
 import { ProfileData } from "@/types";
 import { cn } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
+import { useRouter } from "next/navigation";
+
 export default function Avatar({
   profile,
   className,
@@ -17,10 +25,17 @@ export default function Avatar({
   editable?: boolean;
 }) {
   const { openEditProfileModal } = useNostr();
-
+  const router = useRouter();
   const onClick = () => {
     if (editable) {
       openEditProfileModal(profile.uri, profile);
+    } else {
+      const chainId = getChainIdFromURI(profile.uri);
+      const chainName = getChainSlugFromChainId(chainId);
+      const address = getAddressFromURI(profile.uri);
+      if (chainName && address) {
+        router.push(`/${chainName}/address/${address}`);
+      }
     }
   };
 
@@ -30,8 +45,7 @@ export default function Avatar({
       className={cn(
         "h-12 w-12 border-2 border-gray-300",
         className,
-        editable &&
-          "cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+        "cursor-pointer hover:ring-2 hover:ring-primary transition-all"
       )}
       onClick={onClick}
     >

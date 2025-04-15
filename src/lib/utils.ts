@@ -25,6 +25,15 @@ export const getChainIdFromURI = (uri: string): number | undefined => {
   return undefined;
 };
 
+export const getChainSlugFromChainId = (
+  chainId?: number
+): string | undefined => {
+  if (!chainId) return undefined;
+  return Object.keys(chains).find(
+    (key) => chains[key as keyof typeof chains].id === chainId
+  );
+};
+
 export const getProfileFromNote = (
   note: NostrNote
 ): ProfileData | undefined => {

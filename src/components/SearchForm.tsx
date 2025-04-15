@@ -82,7 +82,7 @@ export default function SearchForm() {
         <select
           id="chain-select"
           name="chain"
-          className="w-28 sm:w-32 p-2 rounded-md border border-input bg-background"
+          className="w-28 sm:w-32 p-2 rounded-md bg-background border-black border dark:border-white"
           value={currentChain}
           onChange={handleChainChange}
         >
@@ -97,7 +97,7 @@ export default function SearchForm() {
           name="value"
           type="text"
           placeholder="tx hash, address or token address"
-          className="flex-1 p-2 rounded-md border border-input bg-background w-full"
+          className="flex-1 p-2 rounded-md bg-background w-full border-black border dark:border-white"
           onChange={handleValueChange}
         />
       </div>
@@ -106,7 +106,7 @@ export default function SearchForm() {
         <button
           type="button"
           onClick={handleGetInfo}
-          className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 p-2 rounded-md"
+          className="flex-1 bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 p-2 rounded-md"
         >
           Get {TYPES.find((t) => t.value === currentType)?.label} Info
         </button>
@@ -115,7 +115,7 @@ export default function SearchForm() {
           <button
             type="button"
             onClick={handleGetTokenInfo}
-            className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90 p-2 rounded-md"
+            className="flex-1 bg-secondary text-secondary-foreground hover:bg-black/10 p-2 rounded-md border-black border dark:border-white"
           >
             Get Token Info
           </button>
