@@ -39,15 +39,19 @@ export type TokenStats = {
   netValue: number;
 };
 export interface Transaction {
-  blockNumber: number;
   txHash: TxHash;
-  txIndex?: number;
-  logIndex?: number;
   timestamp: number;
   from: Address;
   to: Address;
   value: string;
   token: Token;
+}
+
+export interface BlockchainTransaction extends Transaction {
+  blockNumber: number;
+  txIndex?: number;
+  logIndex?: number;
+  chainId?: number;
 }
 
 /**

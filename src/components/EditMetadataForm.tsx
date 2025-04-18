@@ -39,15 +39,17 @@ export default function EditMetadataForm({
         ? notesByURI[uri][notesByURI[uri].length - 1]
         : { tags: [] };
 
+      const newTags = [
+        // Make sure we don't duplicate tags
+        ...previousNote?.tags.filter(
+          (t) => ["i", ...tags.map((nt) => nt[0])].indexOf(t[0]) === -1
+        ),
+        ...tags,
+      ];
+
       await publishMetadata(uri, {
         content: cleanDescription,
-        tags: [
-          // Make sure we don't duplicate tags
-          ...previousNote?.tags.filter(
-            (t) => ["i", ...tags.map((nt) => nt[0])].indexOf(t[0]) === -1
-          ),
-          ...tags,
-        ],
+        tags: newTags,
       });
       onCancel?.();
     } catch (error) {

@@ -111,8 +111,8 @@ const getKindFromURI = (uri: URI): string => {
 };
 
 export function NostrProvider({ children }: { children: React.ReactNode }) {
-  const [pool, setPool] = useState<SimplePool | null>(null);
-  const [connectedRelays, setConnectedRelays] = useState<string[]>([]);
+  const poolRef = useRef<SimplePool | null>(null);
+  const connectedRelaysRef = useRef<string[]>([]);
   const [notesByURI, setNotesByURI] = useState<Record<string, NostrEvent[]>>(
     {}
   ); // Stores kind 1111 events
@@ -162,7 +162,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
           connectionTimeout: 3000, // 3 seconds timeout
         });
         console.log(`>>> NostrProvider connected to ${url}`);
-        setConnectedRelays((prev) => [...prev, url]);
+        connectedRelaysRef.current.push(url);
       } catch (err) {
         console.warn(`Failed to connect to ${url}:`, err);
         // Continue with other relays even if one fails
@@ -170,7 +170,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Set pool even if some relays fail
-    setPool(_pool);
+    poolRef.current = _pool;
 
     return () => {
       try {
@@ -236,7 +236,12 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         ...newPubkeys,
       ];
 
-      profilesSubscriptionsRef.current = pool?.subscribeMany(
+      if (!poolRef.current) {
+        console.error(">>> NostrProvider: pool not connected");
+        return;
+      }
+
+      profilesSubscriptionsRef.current = poolRef.current.subscribeMany(
         relays,
         [
           // Get the most recent profile event
@@ -263,7 +268,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         }
       );
     },
-    [pool]
+    [poolRef]
   );
 
   // Get a number between 0 and 20 based on the uri
@@ -276,6 +281,20 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
   const createNewSubscription = useCallback(
     (uris: URI[], groupIndex: number) => {
+      if (!poolRef.current) {
+        console.error(">>> NostrProvider: pool not connected");
+        return;
+      }
+      if (connectedRelaysRef.current.length === 0) {
+        console.log(
+          ">>> NostrProvider createNewSubscription: no relays, retrying in 1s"
+        );
+        setTimeout(() => {
+          createNewSubscription(uris, groupIndex);
+        }, 1000);
+        return;
+      }
+
       const filter = {
         kinds: [1111], // Listen for kind 1111 notes
         "#i": uris, // Subscribe to multiple #i tags
@@ -284,28 +303,36 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       if (subRef.current[groupIndex]) {
         subRef.current[groupIndex].close();
       }
-      subRef.current[groupIndex] = pool?.subscribeMany(relays, [filter], {
-        onevent: (event) => {
-          // cache event in indexedDB
-          const uri = getURIFromNostrEvent(event);
-          console.log(">>> NostrProvider event received:", uri, event);
-          if (!uri) return;
-          addNostrEventsToState([event]);
-          db?.addNostrEvent(uri, event);
-        },
-      }) as RelaySubscription;
+      subRef.current[groupIndex] = poolRef.current.subscribeMany(
+        relays,
+        [filter],
+        {
+          onevent: (event) => {
+            // cache event in indexedDB
+            const uri = getURIFromNostrEvent(event);
+            console.log(">>> NostrProvider event received:", uri, event);
+            if (!uri) return;
+            addNostrEventsToState([event]);
+            db?.addNostrEvent(uri, event);
+          },
+        }
+      ) as RelaySubscription;
     },
-    [pool, addNostrEventsToState]
+    [poolRef, addNostrEventsToState]
   );
 
   const subscribeToLatestNotes = useCallback(
     ({ kinds, limit }: { kinds: BlockchainKind[]; limit?: number }) => {
+      if (!poolRef.current) {
+        console.error(">>> NostrProvider: pool not connected");
+        return;
+      }
       const filter = {
         kinds: [1111], // Listen for kind 1111 notes
         "#k": kinds,
         limit,
       };
-      latestNotesSubscriptionRef.current = pool?.subscribeMany(
+      latestNotesSubscriptionRef.current = poolRef.current.subscribeMany(
         relays,
         [filter],
         {
@@ -319,7 +346,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       ) as RelaySubscription;
       return latestNotesSubscriptionRef.current;
     },
-    [pool, addNostrEventsToState]
+    [poolRef, addNostrEventsToState]
   );
 
   // Subscribe to kind 1111 notes with #i tags
@@ -331,7 +358,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       const subscriptionGroupsToUpdate: Set<number> = new Set();
       URIs.forEach((u) => {
         const uri = u.toLowerCase() as URI;
-        if (!subscribedURIs.current[uri]) {
+        if (subscribedURIs.current[uri] === undefined) {
           newURIs.push(uri);
           subscribedURIs.current[uri] = getSubscriptionGroup(uri);
           subscriptionGroupsToUpdate.add(subscribedURIs.current[uri]);
@@ -354,12 +381,12 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
 
   const publishEvent = useCallback(
     async (event: EventTemplate, nsec: string) => {
-      if (!pool) throw new Error("Not connected");
+      if (!poolRef.current) throw new Error("Not connected");
 
       const { data: secretKey } = decode(nsec);
       const signedEvent = finalizeEvent(event, secretKey as Uint8Array);
       console.log(">>> NostrProvider publishEvent: signedEvent", signedEvent);
-      await Promise.any(pool.publish(relays, signedEvent));
+      await Promise.any(poolRef.current.publish(relays, signedEvent));
       addNostrEventsToState([signedEvent]);
       console.log(
         ">>> NostrProvider publishEvent: signedEvent added to state",
@@ -367,7 +394,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       );
       return signedEvent;
     },
-    [pool, addNostrEventsToState]
+    [poolRef, addNostrEventsToState]
   );
 
   const openEditProfileModal = useCallback(
@@ -417,7 +444,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       picture: string;
       website: string;
     }) => {
-      if (!pool) throw new Error("Not connected");
+      if (!poolRef.current) throw new Error("Not connected");
       const nsec = getItem("nostr_nsec");
       if (!nsec) throw new Error("Not logged in");
 
@@ -434,9 +461,9 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         prev[signedEvent.pubkey] = profile;
         return prev;
       });
-      await Promise.any(pool.publish(relays, signedEvent));
+      await Promise.any(poolRef.current.publish(relays, signedEvent));
     },
-    [pool]
+    [poolRef]
   );
 
   // Proceed if at least one relay is connected
@@ -445,8 +472,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(
     () => ({
-      pool,
-      connectedRelays,
+      pool: poolRef.current,
+      connectedRelays: connectedRelaysRef.current,
       notesByURI,
       latestNotes,
       subscribeToNotesByURI,
@@ -458,8 +485,8 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       publishMetadata,
     }),
     [
-      pool,
-      connectedRelays,
+      poolRef,
+      connectedRelaysRef,
       notesByURI,
       latestNotes,
       subscribeToNotesByURI,

@@ -14,14 +14,19 @@ export default function TagsList({
 }) {
   if (!tags) return null;
   if (tags.length === 0) return null;
-  if (tags.filter((t) => tagFilter(t, kinds)).length === 0) return null;
+
+  // Create a Set of unique tag combinations and convert back to array
+  const uniqueTags = Array.from(
+    new Set(tags.filter((t) => tagFilter(t, kinds)).map((t) => t.join(":")))
+  ).map((t) => t.split(":"));
+
+  if (uniqueTags.length === 0) return null;
+
   return (
     <div className="flex flex-wrap gap-1 group relative">
-      {tags
-        .filter((t) => tagFilter(t, kinds))
-        .map((t) => (
-          <Tag key={t.join(":")} value={t.join(":")} />
-        ))}
+      {uniqueTags.map((t) => (
+        <Tag key={t.join(":")} value={t.join(":")} />
+      ))}
     </div>
   );
 }

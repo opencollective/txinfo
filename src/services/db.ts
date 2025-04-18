@@ -1,9 +1,9 @@
 import { Dexie } from "dexie";
 import { Event as NostrEvent } from "nostr-tools";
-import { Transaction, URI, Address, TxHash } from "@/types";
+import { BlockchainTransaction, URI, Address, TxHash } from "@/types";
 
 // Define interfaces for our database tables
-interface TransactionRecord extends Transaction {
+interface TransactionRecord extends BlockchainTransaction {
   id?: number;
   uri: URI;
   chain: string;
@@ -43,7 +43,7 @@ class Database extends Dexie {
 
   // Transaction methods
   async bulkUpsertTransactions(
-    transactions: Transaction[],
+    transactions: BlockchainTransaction[],
     chain: string
   ): Promise<void> {
     // Check which transactions already exist
@@ -69,7 +69,7 @@ class Database extends Dexie {
   async getTransactionsByAddress(
     chain: string,
     address: string
-  ): Promise<Transaction[]> {
+  ): Promise<BlockchainTransaction[]> {
     const fromTxs = await this.transactions
       .where("[chain+from]")
       .equals([chain, address])
@@ -93,7 +93,7 @@ class Database extends Dexie {
     chain: string,
     fromBlock: number,
     toBlock: number
-  ): Promise<Transaction[]> {
+  ): Promise<BlockchainTransaction[]> {
     return await this.transactions
       .where("[chain+blockNumber]")
       .between([chain, fromBlock], [chain, toBlock], true, true)
@@ -105,7 +105,7 @@ class Database extends Dexie {
     address: string,
     startTime: number,
     endTime: number
-  ): Promise<Transaction[]> {
+  ): Promise<BlockchainTransaction[]> {
     const allTxs = await this.getTransactionsByAddress(chain, address);
     return allTxs.filter(
       (tx) => tx.timestamp >= startTime && tx.timestamp <= endTime
@@ -115,7 +115,7 @@ class Database extends Dexie {
   async getTransactionsByToken(
     chain: string,
     tokenAddress: string
-  ): Promise<Transaction[]> {
+  ): Promise<BlockchainTransaction[]> {
     return await this.transactions
       .where({ chain: chain, "token.address": tokenAddress })
       .sortBy("timestamp");

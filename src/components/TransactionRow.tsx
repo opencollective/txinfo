@@ -20,19 +20,12 @@ interface TransactionRowProps {
   tx: Transaction;
   chain: string;
   chainId: number;
-  expanded: boolean;
-  onToggleExpand: () => void;
 }
 
-export function TransactionRow({
-  tx,
-  chain,
-  chainId,
-  expanded,
-}: TransactionRowProps) {
+export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { notesByURI } = useNostr();
+  const { notesByURI, subscribeToNotesByURI } = useNostr();
 
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
@@ -46,6 +39,7 @@ export function TransactionRow({
   const getProfileForAddress = useCallback(
     (address: Address): ProfileData => {
       const uri = generateURI("ethereum", { chainId, address });
+      subscribeToNotesByURI([uri]);
       const defaultProfile = {
         uri,
         address: address || undefined,
@@ -60,7 +54,7 @@ export function TransactionRow({
       if (!profile) return defaultProfile;
       return profile;
     },
-    [chainId, notesByURI]
+    [chainId, notesByURI, subscribeToNotesByURI]
   );
 
   const defaultFromProfile = getProfileForAddress(
@@ -134,6 +128,7 @@ export function TransactionRow({
   }
 
   const uri = generateURI("ethereum", { chainId, txHash: tx.txHash });
+  subscribeToNotesByURI([uri]);
   const lastNote = notesByURI[uri] && notesByURI[uri][0];
 
   const handleCancelEdit = () => {
@@ -242,13 +237,6 @@ export function TransactionRow({
           </div>
         </div>
       </div>
-
-      {/* Expanded Notes */}
-      {expanded && (
-        <div className="pl-16 border-l-2">
-          <NotesList notes={notesByURI[uri]} />
-        </div>
-      )}
 
       <Separator />
     </div>

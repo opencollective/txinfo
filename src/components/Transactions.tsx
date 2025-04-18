@@ -8,7 +8,13 @@ import React from "react";
 import { TransactionRow } from "@/components/TransactionRow";
 import { isWithinInterval } from "date-fns";
 import { Loader2, X } from "lucide-react";
-import type { Address, TokenStats, URI, Transaction } from "@/types";
+import type {
+  Address,
+  TokenStats,
+  URI,
+  Transaction,
+  BlockchainTransaction,
+} from "@/types";
 import { useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
@@ -70,8 +76,7 @@ export default function Transactions({
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [txsPerPage, setTxsPerPage] = useState(LIMIT_PER_PAGE);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [expandedTx, setExpandedTx] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
   const { subscribeToNotesByURI } = useNostr();
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
     dateRange: {
@@ -194,7 +199,7 @@ export default function Transactions({
 
     const fetchPastTransactions = async () => {
       try {
-        const transactions: Transaction[] | null =
+        const transactions: BlockchainTransaction[] | null =
           await getTransactionsFromEtherscan(
             chain,
             accountAddress,
@@ -298,10 +303,6 @@ export default function Transactions({
             tx={tx}
             chain={chain}
             chainId={chainConfig.id}
-            expanded={expandedTx === tx.txHash}
-            onToggleExpand={() =>
-              setExpandedTx(expandedTx === tx.txHash ? null : tx.txHash)
-            }
           />
         );
       })}

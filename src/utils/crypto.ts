@@ -10,6 +10,7 @@ import type {
   EtherscanTransfer,
   Address,
   TxHash,
+  BlockchainTransaction,
 } from "@/types/index.d.ts";
 import * as crypto from "./crypto.server";
 export const truncateAddress = crypto.truncateAddress;
@@ -124,18 +125,12 @@ type LogEvent = {
   address: string;
 };
 
-type TxDetails = {
-  chainId: number;
-  hash: string;
-  contract_address: string;
-  name: string;
-  args: string[];
+interface TxDetails extends BlockchainTransaction {
   token: Token;
   events: LogEvent[];
-};
+}
 
 export function useTxDetails(chain: string, txHash?: string) {
-  console.log(">>> useTxDetails", chain, txHash);
   const [txDetails, setTxDetails] = useState<TxDetails | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -150,13 +145,26 @@ export function useTxDetails(chain: string, txHash?: string) {
     const fetchToken = async () => {
       if (!txHash) return;
       try {
-        const tx = await getTxDetails(txHash, provider.current);
+        const txReceipt = await getTxReceipt(chain, txHash, provider.current);
+        if (!txReceipt) return;
         const token = await getTokenDetails(
           chain,
-          tx.contract_address,
+          txReceipt.contract_address,
           provider.current
         );
-        setTxDetails({ ...tx, token });
+        const tx: Partial<Transaction> = {
+          token,
+          timestamp: txReceipt.timestamp,
+          txHash: txReceipt.hash as TxHash,
+        };
+        txReceipt.events.forEach((event: LogEvent) => {
+          if (event.name === "Transfer") {
+            tx.from = event.args[0] as Address;
+            tx.to = event.args[1] as Address;
+            tx.value = event.args[2];
+          }
+        });
+        setTxDetails(tx as TxDetails);
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"));
@@ -231,81 +239,96 @@ export async function getAddressType(
   return res;
 }
 
-export async function getTxDetails(tx_hash: string, provider: JsonRpcProvider) {
+type TxReceipt = {
+  chainId: number;
+  hash: string;
+  blockNumber: number;
+  timestamp: number;
+  events: LogEvent[];
+  contract_address: string;
+};
+
+export async function getTxReceipt(
+  chain: string,
+  tx_hash: string,
+  provider: JsonRpcProvider
+): Promise<TxReceipt | null> {
   const tx = await provider.getTransaction(tx_hash);
   if (!tx?.to) return null;
 
-  if (localStorage.getItem(tx.hash)) {
-    return JSON.parse(localStorage.getItem(tx.hash) || "{}");
+  if (localStorage.getItem(`TxReceipt:${tx.hash}`)) {
+    return JSON.parse(localStorage.getItem(`TxReceipt:${tx.hash}`) || "{}");
   }
 
   const contract = new ethers.Contract(tx.to, ERC20_ABI, provider);
   const receipt = await provider.getTransactionReceipt(tx_hash);
 
+  if (!receipt) return null;
+  const blockNumber = receipt?.blockNumber;
+  const timestamp = await getBlockTimestamp(chain, blockNumber, provider);
+
   try {
     const decoded = contract.interface.parseTransaction({ data: tx.data });
 
     let contract_address = tx.to;
-    let name = decoded?.name;
-    let args = decoded?.args ? Array.from(decoded.args) : [];
     // Parse all logs from the receipt
-    const events = receipt?.logs
-      .map((log) => {
-        try {
-          // Create a new contract instance with the log's address
-          const logContract = new ethers.Contract(
-            log.address,
-            ERC20_ABI,
-            provider
-          );
-          const parsedLog = logContract.interface.parseLog({
-            topics: log.topics,
-            data: log.data,
-          });
+    const processLog = (log: Log) => {
+      try {
+        // Create a new contract instance with the log's address
+        const logContract = new ethers.Contract(
+          log.address,
+          ERC20_ABI,
+          provider
+        );
+        const parsedLog = logContract.interface.parseLog({
+          topics: log.topics,
+          data: log.data,
+        });
 
-          // If we find a Transfer event, this is likely the main token contract
-          if (parsedLog?.name === "Transfer") {
-            contract_address = log.address;
-            name = "Transfer";
-            args = Array.from(parsedLog?.args || []);
-          }
-
-          return {
-            name: parsedLog?.name,
-            args: Array.from(parsedLog?.args || []),
-            address: log.address,
-          };
-        } catch (err) {
-          console.log("Could not parse log:", log, err);
-          return null;
+        // If we find a Transfer event, this is likely the main token contract
+        if (parsedLog?.name === "Transfer") {
+          contract_address = log.address;
         }
-      })
-      .filter((e) => Boolean(e?.name)); // Remove null entries
+
+        return {
+          name: parsedLog?.name,
+          args: Array.from(parsedLog?.args || []),
+          address: log.address,
+        };
+      } catch (err) {
+        console.log("Could not parse log:", log, err);
+        return null;
+      }
+    };
+
+    const events = receipt?.logs.map(processLog);
+    const filteredEvents = events.filter((e) => Boolean(e?.name)); // Remove null entries
 
     const res = {
       chainId: Number(tx.chainId),
       hash: tx.hash,
+      blockNumber,
+      timestamp,
       contract_address, // This might be different from tx.to if it's a proxy
-      name,
-      args,
-      events,
+      events: filteredEvents,
     };
 
     setItem(
-      tx.hash,
+      `TxReceipt:${tx.hash}`,
       JSON.stringify(res, (_, value) =>
         typeof value === "bigint" ? value.toString() : value
       )
     );
 
-    return res;
+    return res as TxReceipt;
   } catch (error) {
     console.error("Error decoding transaction:", error);
     return {
+      chainId: Number(tx.chainId),
+      hash: tx.hash,
+      blockNumber,
+      timestamp,
       contract_address: tx.to,
-      from: tx.from,
-      function: null,
-      args: [],
       events: [],
     };
   }
@@ -339,7 +362,7 @@ export async function processBlockRange(
   const txs = await getBlockRange(chain, address, fromBlock, toBlock, provider);
   if (txs.length > 0) {
     const newTxs: Transaction[] = await Promise.all(
-      txs.map(async (tx: Transaction) => {
+      txs.map(async (tx: BlockchainTransaction) => {
         const timestamp = await getBlockTimestamp(
           chain,
           tx.blockNumber,
@@ -375,7 +398,7 @@ export async function getBlockRange(
   fromBlock: number,
   toBlock: number,
   provider: JsonRpcProvider
-): Promise<Transaction[]> {
+): Promise<BlockchainTransaction[]> {
   const key =
     `${chain}:${accountAddress}[${fromBlock}-${toBlock}]`.toLowerCase();
   const cached = localStorage.getItem(key);
@@ -459,14 +482,14 @@ export async function getBlockRange(
     return b.logIndex - a.logIndex;
   });
   if (!hasError) setItem(key, JSON.stringify(res));
-  return res.filter((tx) => tx !== null) as Transaction[];
+  return res.filter((tx) => tx !== null) as BlockchainTransaction[];
 }
 
 export async function getTxFromLog(
   chain: string,
   log: Log,
   provider: JsonRpcProvider
-): Promise<Transaction> {
+): Promise<BlockchainTransaction> {
   const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
   const parsedLog = contract.interface.parseLog(log);
   const from = parsedLog?.args[0].toLowerCase() as Address;
@@ -524,7 +547,7 @@ export async function getTransactionsFromEtherscan(
   chain: string,
   address?: string,
   tokenAddress?: string
-): Promise<null | Transaction[]> {
+): Promise<null | BlockchainTransaction[]> {
   const key = `${chain}:${address}${
     tokenAddress ? `:${tokenAddress}` : ""
   }`.toLowerCase();

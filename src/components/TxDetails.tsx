@@ -10,16 +10,22 @@ import { decomposeURI } from "@/lib/utils";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { TransactionRow } from "./TransactionRow";
 
 export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
   const { chainId, txHash } = decomposeURI(uri);
-  const chainConfig: ChainConfig | undefined = Object.values(chains).find(
-    (c) => c.id === chainId
-  ) as ChainConfig;
   const [txDetails, isLoading] = useTxDetails(chain, txHash);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  console.log("txDetails", txDetails);
+  let chainConfig: ChainConfig | undefined;
+  let chainName: string | undefined;
+  Object.keys(chains).forEach((key) => {
+    if (chains[key as keyof typeof chains].id === chainId) {
+      chainConfig = chains[key as keyof typeof chains];
+      chainName = key;
+      return;
+    }
+  });
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -30,38 +36,45 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
 
   const token = txDetails.token;
 
+  if (!chainId) {
+    return <div>No chain id...</div>;
+  }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Transaction Details</span>
-          <a
-            href={`${chainConfig?.explorer_url}/tx/${txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
-          >
-            View on {chainConfig?.explorer_name}{" "}
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
+    <div>
+      <TransactionRow tx={txDetails} chain={chain} chainId={chainId} />
+      <div className="mt-4">
         <div className="flex flex-row gap-4">
           <div className="space-y-2">
-            <div className="text-sm font-medium">Transaction Hash</div>
-            <CopyableValue value={txHash ?? ""} truncate />
+            <div className="text-sm font-semibold">Chain</div>
+            <div className="flex flex-row gap-2 h-7 items-center">
+              {chainName}
+            </div>
           </div>
 
           <div className="space-y-2">
-            <div className="text-sm font-medium">Token</div>
-            <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold">Transaction Hash</div>
+            <div className="flex flex-row gap-2 h-7 items-center">
+              <CopyableValue value={txHash ?? ""} truncate />
+              <a
+                href={`${chainConfig?.explorer_url}/tx/${txHash}`}
+                target="_blank"
+                title={`View transaction on ${chainConfig?.explorer_name}`}
+                rel="noopener noreferrer"
+                className="text-sm text-muted-foreground hover:text-primary flex items-center p-2 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Token</div>
+            <div className="flex gap-2 h-7 items-center">
               <Link
                 href={`/${chain}/token/${token?.address}`}
                 title={`View ${token?.symbol} token on TxInfo`}
               >
-                <span className="text-lg">{token?.name}</span>
+                <span className="text-base">{token?.name}</span>
               </Link>
               <a
                 href={`${chainConfig?.explorer_url}/token/${token.address}`}
@@ -134,7 +147,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import TxDetails from "@/components/TxDetails";
-import Metadata from "@/components/Metadata";
+import History from "@/components/History";
 import chains from "@/chains.json";
 import { generateURI } from "@/lib/utils";
 export default async function Page({
@@ -17,7 +17,7 @@ export default async function Page({
     <div className="app">
       <div className="flex flex-col gap-4">
         <TxDetails uri={uri} chain={chain} />
-        <Metadata uri={uri} />
+        <History uri={uri} />
       </div>
     </div>
   );

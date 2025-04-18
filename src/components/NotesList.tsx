@@ -3,16 +3,17 @@ import { extractHashtags, getNpubFromPubkey } from "@/lib/utils";
 import { useNostr, type NostrNote } from "@/providers/NostrProvider";
 interface Props {
   notes: NostrNote[];
+  className?: string;
 }
 
-export default function NotesList({ notes }: Props) {
+export default function NotesList({ notes, className }: Props) {
   const { profiles, subscribeToProfiles } = useNostr();
   if (!notes) return null;
   const pubkeys = notes.map((note) => note.pubkey);
   subscribeToProfiles(pubkeys);
 
   return (
-    <Timeline>
+    <Timeline className={className}>
       {notes?.length > 0 &&
         notes.map((note, i) => {
           const hasTags = note.tags.some((t) => t[0] === "t");
@@ -23,10 +24,9 @@ export default function NotesList({ notes }: Props) {
             : "description";
 
           const { cleanDescription } = extractHashtags(note.content);
-
           return (
             <TimelineItem
-              key={i}
+              key={`timeline-item-${i}`}
               date={note.created_at * 1000}
               user={{
                 name:

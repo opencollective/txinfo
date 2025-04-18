@@ -1,14 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  JsonRpcProvider,
-  WebSocketProvider,
-  Log,
-  ethers,
-  Contract,
-} from "ethers";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { JsonRpcProvider, WebSocketProvider, Log, ethers } from "ethers";
 import chains from "@/chains.json";
-import { Address, ChainConfig, Transaction } from "@/types";
-import { getTxFromLog, processBlockRange } from "@/utils/crypto";
+import { Address, BlockchainTransaction, ChainConfig } from "@/types";
+import { getTxFromLog } from "@/utils/crypto";
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 
@@ -63,7 +57,7 @@ export function useLiveTransactions({
   accountAddress?: Address;
   maxTransactionsPerMinute?: number;
 }) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const last10ProcessedTxTimestamp = useRef<number[]>([0]);
   const skippedTransactionsRef = useRef<number>(0);

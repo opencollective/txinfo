@@ -320,10 +320,6 @@ export default function Transactions({ address, chain }: Props) {
             tx={tx}
             chain={chain}
             chainId={chainConfig.id}
-            expanded={expandedTx === tx.txHash}
-            onToggleExpand={() =>
-              setExpandedTx(expandedTx === tx.txHash ? null : tx.txHash)
-            }
           />
         );
       })}
