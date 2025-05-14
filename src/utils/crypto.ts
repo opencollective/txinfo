@@ -543,6 +543,24 @@ export async function getBlockRangeForAddress(
   }
 }
 
+const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
+  return data.map((tx: EtherscanTransfer) => ({
+    blockNumber: Number(tx.blockNumber),
+    txHash: tx.hash,
+    txIndex: Number(tx.transactionIndex),
+    timestamp: Number(tx.timeStamp),
+    from: tx.from,
+    to: tx.to,
+    value: tx.value,
+    token: {
+      address: tx.contractAddress || "",
+      name: tx.tokenName || "Ether",
+      decimals: Number(tx.tokenDecimal) || 18,
+      symbol: tx.tokenSymbol || "ETH",
+    },
+  }));
+};
+
 export async function getTransactionsFromEtherscan(
   chain: string,
   address?: string,
@@ -602,35 +620,12 @@ export async function getTransactionsFromEtherscan(
       ? window.location.origin
       : process.env.NEXT_PUBLIC_WEBSITE_URL
   }/api/etherscan?${params.toString()}`;
-
   const response = await fetch(apicall);
   try {
     const data = await response.json();
-    if (data.status === "1") {
-      const res = data.result.map((tx: EtherscanTransfer) => ({
-        blockNumber: Number(tx.blockNumber),
-        txHash: tx.hash,
-        txIndex: Number(tx.transactionIndex),
-        timestamp: Number(tx.timeStamp),
-        from: tx.from,
-        to: tx.to,
-        value: tx.value,
-        token: {
-          address: tx.contractAddress,
-          name: tx.tokenName,
-          decimals: Number(tx.tokenDecimal),
-          symbol: tx.tokenSymbol,
-        },
-      }));
-      setItem(
-        key,
-        JSON.stringify({ transactions: res, timestamp: Date.now() })
-      );
-      return res;
-    } else {
-      console.log(">>> error from /api/etherscan", data);
-      return null;
-    }
+    const res = convertEtherscanDataToTransactionType(data);
+    setItem(key, JSON.stringify({ transactions: res, timestamp: Date.now() }));
+    return res;
   } catch (e) {
     console.error("Error in getTransactionsFromEtherscan:", e);
     return null;

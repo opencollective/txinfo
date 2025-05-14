@@ -1,5 +1,6 @@
 import chains from "@/chains.json";
 import type { ChainConfig, EtherscanResponse } from "@/types/index.d.ts";
+import { getTransactions } from "@/utils/crypto.server";
 
 let cache: Record<string, EtherscanResponse> = {};
 
@@ -11,6 +12,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
   const chain = searchParams.get("chain");
+  if (!address || !chain) {
+    return Response.json(
+      { error: "Missing address or chain" },
+      { status: 400 }
+    );
+  }
   const contractaddress = searchParams.get("contractaddress");
 
   const cacheKey = `${chain}:${contractaddress}:${address}`;
@@ -37,42 +44,19 @@ export async function GET(req: Request) {
     return Response.json({ error: "API key not configured" }, { status: 500 });
   }
 
-  const params = new URLSearchParams({
-    module: "account",
-    action: "tokentx",
-    startblock: "0",
-    endblock: "99999999",
-    sort: "desc",
-    apikey: apikey || "",
-  });
-
-  // Add optional filters
-  if (address) {
-    params.set("address", address);
-  }
-  if (contractaddress) {
-    params.set("contractaddress", contractaddress);
-  }
-
-  if (!chainConfig.explorer_api) {
-    throw new Error(`No explorer API found for chain ${chain}`);
-  }
-
-  const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
-  const response = await fetch(apicall);
-  const data = await response.json();
-  if (data.status === "1") {
-    cache[cacheKey] = data;
-    return Response.json(data, {
+  try {
+    const transactions = await getTransactions(chain, contractaddress, address);
+    return Response.json(transactions, {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400",
       },
     });
+  } catch (e) {
+    console.error(e);
+    return Response.json(
+      { error: `Failed to fetch transactions` },
+      { status: 500 }
+    );
   }
-  console.error("Failed to fetch contract info", data);
-  return Response.json(
-    { error: `Failed to fetch contract info (${data?.result})` },
-    { status: 500 }
-  );
 }

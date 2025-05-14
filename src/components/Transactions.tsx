@@ -230,12 +230,14 @@ export default function Transactions({
   useEffect(() => {
     const uris = new Set<URI>();
     currentPageTxs.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
-      uris.add(
-        generateURI("ethereum", {
-          chainId: chainConfig.id,
-          address: tx.token?.address,
-        })
-      );
+      if (tx.token?.address) {
+        uris.add(
+          generateURI("ethereum", {
+            chainId: chainConfig.id,
+            address: tx.token?.address,
+          })
+        );
+      }
       uris.add(
         generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
       );

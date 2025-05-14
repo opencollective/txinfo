@@ -117,7 +117,7 @@ export function generateURI(
     parts.push("address");
     parts.push(params.address);
   } else {
-    throw new Error("Invalid parameters");
+    throw new Error("Invalid parameters: " + JSON.stringify(params));
   }
   return parts.join(":").toLowerCase() as URI;
 }
