@@ -206,6 +206,7 @@ export async function getTransactions(
         "native"
       );
       res.push(...nativeTxs);
+      res.sort((a, b) => b.blockNumber - a.blockNumber);
     }
     cache[cacheKey] = data.result;
     return data.result;
