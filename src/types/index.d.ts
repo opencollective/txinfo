@@ -87,6 +87,11 @@ export type EtherscanTransfer = {
 
 export type ChainConfig = {
   id: number;
+  native_token?: {
+    symbol: string;
+    name: string;
+    decimals: number;
+  };
   explorer_url: string;
   explorer_api?: string;
   explorer_name: string;

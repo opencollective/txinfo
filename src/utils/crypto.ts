@@ -554,10 +554,10 @@ const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
     to: tx.to,
     value: tx.value,
     token: {
-      address: tx.contractAddress || "",
-      name: tx.tokenName || "Ether",
+      address: tx.contractAddress,
+      name: tx.tokenName,
       decimals: Number(tx.tokenDecimal) || 18,
-      symbol: tx.tokenSymbol || "ETH",
+      symbol: tx.tokenSymbol,
     },
   }));
 };

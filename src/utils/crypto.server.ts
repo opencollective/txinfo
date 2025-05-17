@@ -197,6 +197,8 @@ export async function getTransactions(
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {
+    const nativeToken =
+      chainConfig.native_token || chains["ethereum"].native_token;
     const res = (data.result as EtherscanTransfer[]) || [];
     if (type !== "native") {
       const nativeTxs = await getTransactions(
@@ -205,7 +207,18 @@ export async function getTransactions(
         address,
         "native"
       );
-      res.push(...nativeTxs);
+      res.push(
+        ...nativeTxs.map((tx) => {
+          return {
+            ...tx,
+            contractAddress:
+              "0x0000000000000000000000000000000000000000" as Address,
+            tokenSymbol: nativeToken.symbol,
+            tokenName: nativeToken.name,
+            tokenDecimal: nativeToken.decimals.toString(),
+          };
+        })
+      );
       res.sort((a, b) => b.blockNumber - a.blockNumber);
     }
     cache[cacheKey] = data.result;

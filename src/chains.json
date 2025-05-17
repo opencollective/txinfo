@@ -1,6 +1,11 @@
 {
   "ethereum": {
     "id": 1,
+    "native_token": {
+      "symbol": "ETH",
+      "name": "Ether",
+      "decimals": 18
+    },
     "explorer_url": "https://etherscan.io",
     "explorer_name": "Etherscan",
     "explorer_api": "https://api.etherscan.io",
@@ -31,6 +36,11 @@
   },
   "celo": {
     "id": 42220,
+    "native_token": {
+      "symbol": "CELO",
+      "name": "Celo",
+      "decimals": 18
+    },
     "explorer_url": "https://celoscan.io",
     "explorer_api": "https://api.celoscan.io",
     "explorer_name": "CeloScan",
