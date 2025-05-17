@@ -544,6 +544,7 @@ export async function getBlockRangeForAddress(
 }
 
 const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
+  if (!Array.isArray(data)) return [];
   return data.map((tx: EtherscanTransfer) => ({
     blockNumber: Number(tx.blockNumber),
     txHash: tx.hash,
@@ -572,17 +573,24 @@ export async function getTransactionsFromEtherscan(
   const cached = localStorage.getItem(key);
   if (cached) {
     const cachedObject = JSON.parse(cached);
-    if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60) {
-      console.log(">>> getTransactionsFromEtherscan: cache hit", key);
-
-      return cachedObject.transactions;
-    } else if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60 * 24 * 7) {
-      // 7 days
-      // We return the cached transactions and update the cache
-      console.log(">>> getTransactionsFromEtherscan: updating cache", key);
+    if (cachedObject.transactions.length === 0) {
       localStorage.removeItem(key);
-      getTransactionsFromEtherscan(chain, address, tokenAddress);
-      return cachedObject.transactions;
+    } else {
+      if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60) {
+        console.log(">>> getTransactionsFromEtherscan: cache hit", key);
+
+        return cachedObject.transactions;
+      } else if (
+        cachedObject.timestamp >
+        Date.now() - 1000 * 60 * 60 * 24 * 7
+      ) {
+        // 7 days
+        // We return the cached transactions and update the cache
+        console.log(">>> getTransactionsFromEtherscan: updating cache", key);
+        localStorage.removeItem(key);
+        getTransactionsFromEtherscan(chain, address, tokenAddress);
+        return cachedObject.transactions;
+      }
     }
   }
 
@@ -624,8 +632,19 @@ export async function getTransactionsFromEtherscan(
   try {
     const data = await response.json();
     const res = convertEtherscanDataToTransactionType(data);
-    setItem(key, JSON.stringify({ transactions: res, timestamp: Date.now() }));
-    return res;
+    if (res.length > 0) {
+      setItem(
+        key,
+        JSON.stringify({ transactions: res, timestamp: Date.now() })
+      );
+      return res;
+    } else {
+      console.log(
+        ">>> getTransactionsFromEtherscan: no transactions found",
+        key
+      );
+      return null;
+    }
   } catch (e) {
     console.error("Error in getTransactionsFromEtherscan:", e);
     return null;

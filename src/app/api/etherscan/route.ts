@@ -12,13 +12,16 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
   const chain = searchParams.get("chain");
-  if (!address || !chain) {
+  const contractaddress = searchParams.get("contractaddress");
+  if (!chain) {
+    return Response.json({ error: "Missing chain" }, { status: 400 });
+  }
+  if (!address && !contractaddress) {
     return Response.json(
-      { error: "Missing address or chain" },
+      { error: "Missing address or contractaddress" },
       { status: 400 }
     );
   }
-  const contractaddress = searchParams.get("contractaddress");
 
   const cacheKey = `${chain}:${contractaddress}:${address}`;
 
