@@ -196,40 +196,31 @@ export async function getTransactions(
   const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
   const response = await fetch(apicall);
   const data = await response.json();
-  if (data.status === "1") {
-    const nativeToken =
-      chainConfig.native_token || chains["ethereum"].native_token;
-    const res = (data.result as EtherscanTransfer[]) || [];
-    if (type !== "native") {
-      const nativeTxs = await getTransactions(
-        chain,
-        contractaddress,
-        address,
-        "native"
-      );
-      res.push(
-        ...nativeTxs.map((tx) => {
-          return {
-            ...tx,
-            contractAddress:
-              "0x0000000000000000000000000000000000000000" as Address,
-            tokenSymbol: nativeToken.symbol,
-            tokenName: nativeToken.name,
-            tokenDecimal: nativeToken.decimals.toString(),
-          };
-        })
-      );
-      res.sort((a, b) => b.blockNumber - a.blockNumber);
-    }
-    cache[cacheKey] = data.result;
-    return data.result;
+  const nativeToken =
+    chainConfig.native_token || chains["ethereum"].native_token;
+  const res = (data.result as EtherscanTransfer[]) || [];
+  if (type !== "native") {
+    const nativeTxs = await getTransactions(
+      chain,
+      contractaddress,
+      address,
+      "native"
+    );
+    res.push(
+      ...nativeTxs.map((tx) => {
+        return {
+          ...tx,
+          contractAddress:
+            "0x0000000000000000000000000000000000000000" as Address,
+          tokenSymbol: nativeToken.symbol,
+          tokenName: nativeToken.name,
+          tokenDecimal: nativeToken.decimals.toString(),
+        };
+      })
+    );
+    res.sort((a, b) => b.blockNumber - a.blockNumber);
   }
-  if (data.status === "0") {
-    console.error(">>> error fetching transactions", apicall, data.message);
-    return [];
-  }
-  console.error(">>> error fetching transactions", apicall, data);
-  throw new Error(
-    `Failed to fetch transactions for ${chain}:${contractaddress}:${address}:${type}`
-  );
+  cache[cacheKey] = data.result;
+
+  return data.result;
 }
