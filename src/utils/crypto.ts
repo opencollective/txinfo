@@ -573,7 +573,7 @@ export async function getTransactionsFromEtherscan(
   const cached = localStorage.getItem(key);
   if (cached) {
     const cachedObject = JSON.parse(cached);
-    if (cachedObject.transactions.length === 0) {
+    if (cachedObject.transactions.length === 0 || cachedObject.version !== 1) {
       localStorage.removeItem(key);
     } else {
       if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60) {
@@ -635,7 +635,7 @@ export async function getTransactionsFromEtherscan(
     if (res.length > 0) {
       setItem(
         key,
-        JSON.stringify({ transactions: res, timestamp: Date.now() })
+        JSON.stringify({ transactions: res, timestamp: Date.now(), version: 1 })
       );
       return res;
     } else {
