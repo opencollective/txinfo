@@ -196,29 +196,34 @@ export async function getTransactions(
   const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
   const response = await fetch(apicall);
   const data = await response.json();
-  const nativeToken =
-    chainConfig.native_token || chains["ethereum"].native_token;
-  const res = (data.result as EtherscanTransfer[]) || [];
-  if (type !== "native") {
-    const nativeTxs = await getTransactions(
-      chain,
-      contractaddress,
-      address,
-      "native"
-    );
-    res.push(
-      ...nativeTxs.map((tx) => {
-        return {
-          ...tx,
-          contractAddress:
-            "0x0000000000000000000000000000000000000000" as Address,
-          tokenSymbol: nativeToken.symbol,
-          tokenName: nativeToken.name,
-          tokenDecimal: nativeToken.decimals.toString(),
-        };
-      })
-    );
-    res.sort((a, b) => b.blockNumber - a.blockNumber);
+
+  if (type !== "token") {
+    const nativeToken =
+      chainConfig.native_token || chains["ethereum"].native_token;
+    const res = (data.result as EtherscanTransfer[]) || [];
+    if (type !== "native") {
+      const nativeTxs = await getTransactions(
+        chain,
+        contractaddress,
+        address,
+        "native"
+      );
+      if (Array.isArray(nativeTxs) && nativeTxs.length > 0) {
+        res.push(
+          ...nativeTxs.map((tx) => {
+            return {
+              ...tx,
+              contractAddress:
+                "0x0000000000000000000000000000000000000000" as Address,
+              tokenSymbol: nativeToken.symbol,
+              tokenName: nativeToken.name,
+              tokenDecimal: nativeToken.decimals.toString(),
+            };
+          })
+        );
+        res.sort((a, b) => b.blockNumber - a.blockNumber);
+      }
+    }
   }
   cache[cacheKey] = data.result;
 
