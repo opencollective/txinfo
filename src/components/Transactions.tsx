@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { getTransactionsFromEtherscan } from "../utils/crypto";
 import chains from "../chains.json";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,11 @@ import { useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
 import { useLiveTransactions } from "@/hooks/useLiveTransactions";
-import { formatTimestamp, generateURI } from "@/lib/utils";
+import { formatTimestamp, generateURI, getProfileFromNote } from "@/lib/utils";
 import { ethers } from "ethers";
 import Pagination from "./Pagination";
+import ExportCSVButton from "./ExportCSVButton";
+
 interface Props {
   chain: string;
   tokenAddress?: Address;
@@ -77,7 +79,7 @@ export default function Transactions({
   const [currentPage, setCurrentPage] = useState(1);
   const [txsPerPage, setTxsPerPage] = useState(LIMIT_PER_PAGE);
   const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
-  const { subscribeToNotesByURI } = useNostr();
+  const { subscribeToNotesByURI, notesByURI } = useNostr();
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
     dateRange: {
       start: null,
@@ -98,6 +100,14 @@ export default function Transactions({
     maxTransactionsPerMinute: 45,
   });
   const [error, setError] = useState<string | null>(null);
+
+  // Create a ref to always access the latest notesByURI
+  const notesByURIRef = useRef(notesByURI);
+
+  // Update the ref whenever notesByURI changes
+  useEffect(() => {
+    notesByURIRef.current = notesByURI;
+  }, [notesByURI]);
 
   const chainConfig = chains[chain as keyof typeof chains];
   const referenceAccount = accountAddress
@@ -310,13 +320,22 @@ export default function Transactions({
       })}
 
       {/* pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        txsPerPage={txsPerPage}
-        onPageChange={setCurrentPage}
-        onTxsPerPageChange={setTxsPerPage}
-      />
+      <div className="flex items-center justify-between">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          txsPerPage={txsPerPage}
+          onPageChange={setCurrentPage}
+          onTxsPerPageChange={setTxsPerPage}
+        />
+
+        <ExportCSVButton
+          transactions={filteredTransactions}
+          chain={chain}
+          chainId={chainConfig.id}
+          onError={setError}
+        />
+      </div>
 
       {error && (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t">

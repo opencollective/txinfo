@@ -365,7 +365,15 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         }
       });
       if (newURIs.length === 0) return;
-
+      console.log(
+        ">>> NostrProvider subscribeToNotesByURI newURIs",
+        newURIs.length,
+        newURIs.slice(0, 10)
+      );
+      console.log(
+        ">>> NostrProvider subscribeToNotesByURI total subscriptions",
+        Object.keys(subscribedURIs.current).length
+      );
       const cachedEvents = await db?.getNostrEventsByURIs(newURIs);
       addNostrEventsToState(cachedEvents);
 
