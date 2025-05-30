@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import CopyableValue from "./CopyableValue";
 import { useTxDetails } from "@/utils/crypto";
-import type { URI, ChainConfig } from "@/types";
+import type { URI, ChainConfig, Chain } from "@/types";
 import chains from "@/chains.json";
 import { decomposeURI } from "@/lib/utils";
 import { useState } from "react";
@@ -12,7 +12,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { TransactionRow } from "./TransactionRow";
 
-export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
+export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
   const { chainId, txHash } = decomposeURI(uri);
   const [txDetails, isLoading] = useTxDetails(chain, txHash);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -21,7 +21,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
   let chainName: string | undefined;
   Object.keys(chains).forEach((key) => {
     if (chains[key as keyof typeof chains].id === chainId) {
-      chainConfig = chains[key as keyof typeof chains];
+      chainConfig = chains[key as keyof typeof chains] as ChainConfig;
       chainName = key;
       return;
     }

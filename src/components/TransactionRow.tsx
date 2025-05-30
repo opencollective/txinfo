@@ -6,7 +6,7 @@ import Avatar from "@/components/Avatar";
 import { Separator } from "@/components/ui/separator";
 import NotesList from "@/components/NotesList";
 import { useNostr } from "@/providers/NostrProvider";
-import type { Transaction, Address, ProfileData } from "@/types";
+import type { Transaction, Address, ProfileData, Chain } from "@/types";
 import EditMetadataForm from "@/components/EditMetadataForm";
 import TagsList from "./TagsList";
 import {
@@ -18,7 +18,7 @@ import {
 import { getENSDetailsFromAddress } from "@/utils/crypto.server";
 interface TransactionRowProps {
   tx: Transaction;
-  chain: string;
+  chain: Chain;
   chainId: number;
 }
 
@@ -165,7 +165,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
               {/* Timestamp is always visible */}
               <div className="flex items-center text-sm">
                 <Link
-                  href={`/${chain}/tx/${tx.txHash}`}
+                  href={`/${String(chain)}/tx/${tx.txHash}`}
                   title={formatTimestamp(
                     tx.timestamp,
                     "MMM d, yyyy 'at' HH:mm:ss zzz"
@@ -200,7 +200,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
             <div className="flex items-center justify-between gap-4 text-sm">
               <div className="flex flex-wrap items-center gap-4">
                 <Link
-                  href={`/${chain}/tx/${tx.txHash}`}
+                  href={`/${String(chain)}/tx/${tx.txHash}`}
                   title={formatTimestamp(
                     tx.timestamp,
                     "MMM d, yyyy 'at' HH:mm:ss zzz"
@@ -229,7 +229,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
                 Number(ethers.formatUnits(tx.value, tx.token.decimals))
               )}{" "}
             </span>
-            <Link href={`/${chain}/token/${tx.token.address}`}>
+            <Link href={`/${String(chain)}/token/${tx.token.address}`}>
               <span className="text-sm font-normal text-muted-foreground">
                 {tx.token.symbol?.substring(0, 6)}
               </span>

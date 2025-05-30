@@ -10,15 +10,16 @@ import { TransactionRow } from "@/components/TransactionRow";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { X } from "lucide-react";
-import type { Address, Token, URI, Transaction } from "@/types";
+import type { Address, Token, URI, Transaction, Chain, ChainConfig } from "@/types";
 import { cn, generateURI } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
 import Filters, { type Filter } from "./Filters";
+import { createProvider, TxBatchProvider } from "@/utils/rpcProvider";
 
 interface Props {
-  address: string;
-  chain: string;
+  address: Address;
+  chain: Chain;
 }
 
 const LIMIT_PER_PAGE = 50;
@@ -45,13 +46,16 @@ export default function Transactions({ address, chain }: Props) {
   const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const chainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
   const rpc = useMemo(
     () =>
       typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
     [chainConfig]
   );
-  const provider = useRef<JsonRpcProvider>(new JsonRpcProvider(rpc[0]));
+  const provider = useRef<TxBatchProvider>(createProvider({
+    rpcUrl: rpc[0],
+    type: chainConfig.type
+  }));
   const allTransactions = useRef<Transaction[]>([]);
   const limit = 10000;
   let errorCount = 0;
@@ -167,12 +171,11 @@ export default function Transactions({ address, chain }: Props) {
           //   toBlock
           // );
           try {
-            const newTxs: Transaction[] = await processBlockRange(
+            const newTxs: Transaction[] = await provider.current.processBlockRange(
               chain,
               address,
               fromBlock,
               toBlock,
-              provider.current
             );
             // Update progress
             setProgress({
@@ -235,7 +238,7 @@ export default function Transactions({ address, chain }: Props) {
         });
         // Store in localStorage
         setItem(
-          `${chain}:${address}:transactions`,
+          `${String(chain)}:${address}:transactions`,
           JSON.stringify(allTransactions.current)
         );
       } catch (error) {

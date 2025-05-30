@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { formatInTimeZone } from "date-fns-tz";
-import { Address, ChainConfig, ProfileData, URI } from "@/types";
+import { Address, ChainConfig, ChainModel, ProfileData, URI } from "@/types";
 import { npubEncode } from "nostr-tools/nip19";
 import chains from "@/chains.json";
 import { NostrNote } from "@/providers/NostrProvider";
@@ -103,23 +103,40 @@ export function formatTimestamp(ts: number, format = "MMM d HH:mm"): string {
 }
 
 export function generateURI(
-  blockchain: string, // ethereum, bitcoin, solana, ...
+  model: ChainModel,
   params: { chainId?: number; txHash?: string; address?: string }
 ): URI {
-  const parts: (string | number)[] = [blockchain];
-  if (params.chainId) {
-    parts.push(params.chainId);
+  let parts: (string | number)[] = [model];
+  switch (model) {
+    case "ethereum":
+      if (params.chainId) {
+        parts.push(params.chainId);
+      }
+      if (params.txHash) {
+        parts.push("tx");
+        parts.push(params.txHash);
+      } else if (params.address) {
+        parts.push("address");
+        parts.push(params.address);
+      } else {
+        throw new Error("Invalid parameters: " + JSON.stringify(params));
+      }
+      return parts.join(":").toLowerCase() as URI;
+    case "rosetta":
+      if (params.chainId) {
+        parts.push(params.chainId);
+      }
+      if (params.txHash) {
+        parts.push("tx");
+        parts.push(params.txHash);
+      } else if (params.address) {
+        parts.push("address");
+        parts.push(params.address);
+      } else {
+        throw new Error("Invalid parameters: " + JSON.stringify(params));
+      }
+      return parts.join(":").toLowerCase() as URI;
   }
-  if (params.txHash) {
-    parts.push("tx");
-    parts.push(params.txHash);
-  } else if (params.address) {
-    parts.push("address");
-    parts.push(params.address);
-  } else {
-    throw new Error("Invalid parameters: " + JSON.stringify(params));
-  }
-  return parts.join(":").toLowerCase() as URI;
 }
 
 export function getNpubFromPubkey(
