@@ -1,11 +1,12 @@
-import { Address, Chain, Token, Transaction, TxBatch, TxHash } from "@/types";
-import { JsonRpcProvider } from "ethers";
-import { blockToTxBatch, txToTransaction } from "./helpers-ether";
+import { Address, Chain, Token, Transaction, TxBatch } from "@/types";
 import { createClient } from "@stacks/blockchain-api-client";
-import { stacksBlockResponseToTxBatch } from "./helpers-stacks";
+import { createClient as createTokenClient } from "@hirosystems/token-metadata-api-client";
+import { JsonRpcProvider } from "ethers";
 import { TxReceipt } from "./crypto";
-import * as chains from "../chains.json";
-export type ProviderType = "evm" | "stacks" | "bitcoin";
+import * as EthereumHelpers from "./helpers-ether";
+import * as Stacks from "./crypto-stacks";
+import * as Ethereum from "./crypto-ethereum";
+export type ProviderType = "ethereum" | "stacks" | "bitcoin";
 
 export interface ProviderConfig {
   type: ProviderType;
@@ -15,8 +16,8 @@ export interface ProviderConfig {
 
 export interface TxBatchProvider {
   getTxBatch(blockNumber: number): Promise<TxBatch | null>;
-  getTransaction(txHash: string): Promise<Transaction | null>;
-  getTxReceipt(chain: Chain, txHash: string): Promise<TxReceipt | null>;
+  getTransaction(txId: string): Promise<Transaction | null>;
+  getTxReceipt(chain: Chain, txId: string): Promise<TxReceipt | null>;
   getTokenDetails(chain: Chain, tokenAddress: string): Promise<Token | null>;
   getBlockRange(
     chain: Chain,
@@ -27,15 +28,17 @@ export interface TxBatchProvider {
 }
 
 export function createProvider(config: ProviderConfig): TxBatchProvider {
-  if (config.type === "evm") {
+  if (config.type === "ethereum") {
     const provider = new JsonRpcProvider(config.rpcUrl);
     return {
       getTxBatch: (blockNumber) =>
-        provider.getBlock(blockNumber).then(blockToTxBatch),
-      getTransaction: (txHash) =>
-        provider.getTransaction(txHash).then(txToTransaction),
-      getTxReceipt: (txHash) => Promise.resolve(null),
-      getTokenDetails: async (chain, tokenAddress) => Promise.resolve(null),
+        provider.getBlock(blockNumber).then(EthereumHelpers.blockToTxBatch),
+      getTransaction: (txId) =>
+        provider.getTransaction(txId).then(EthereumHelpers.txToTransaction),
+      getTxReceipt: (chain, txId) =>
+        Ethereum.getTxReceipt(chain, txId, provider),
+      getTokenDetails: async (chain, tokenAddress) =>
+        Ethereum.getTokenDetails(chain, tokenAddress, provider),
       getBlockRange: async (
         chain: Chain,
         address: Address,
@@ -48,26 +51,25 @@ export function createProvider(config: ProviderConfig): TxBatchProvider {
     const client = createClient({
       baseUrl: config.rpcUrl,
     });
+
+    const tokenClient = createTokenClient({
+      baseUrl: config.rpcUrl,
+    });
     return {
-      getTxBatch: async (blockHeight: number) => {
-        const res = await client
-          .GET(`/extended/v2/blocks/{height_or_hash}/transactions`, {
-            params: {
-              path: {
-                height_or_hash: blockHeight,
-              },
-            },
-          })
-          .then((r) => r.data)
-          .then(stacksBlockResponseToTxBatch);
-        return res;
-      },
+      getTxBatch: async (blockHeight: number) =>
+        Stacks.getTxBatch(blockHeight, client),
       getTransaction: async (txId: string) => {
         const res = await fetch(`${config.rpcUrl}/extended/v1/tx/${txId}`);
         return res.json();
       },
-      getTxReceipt: (txHash) => Promise.resolve(null),
-      getTokenDetails: async (chain, tokenAddress) => Promise.resolve(null),
+      getTxReceipt: async (chain: Chain, txId: string) =>
+        Stacks.getTxReceipt(chain, txId, client),
+      getTokenDetails: async (chain: Chain, tokenContractAddress: string) =>
+        Stacks.getTokenDetails(
+          chain,
+          tokenContractAddress as `${string}.${string}:${string}`,
+          tokenClient
+        ),
       getBlockRange: async (
         chain: Chain,
         address: Address,

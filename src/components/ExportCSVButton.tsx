@@ -50,7 +50,7 @@ export default function ExportCSVButton({
         allUris.add(
           generateURI("ethereum", {
             chainId: chainId,
-            txHash: tx.txHash,
+            txId: tx.txId,
           })
         );
 
@@ -127,7 +127,7 @@ export default function ExportCSVButton({
         // Get transaction description from notes
         const txURI = generateURI("ethereum", {
           chainId: chainId,
-          txHash: tx.txHash,
+          txId: tx.txId,
         });
         const txNote = notesByURIRef.current[txURI]?.[0];
         const description = txNote?.content || "";
@@ -162,7 +162,7 @@ export default function ExportCSVButton({
         return [
           `${year}-${month}-${day}`, // YYYY-MM-DD format in local timezone
           `${hours}:${minutes}:${seconds}`, // HH:MM:SS format in local timezone
-          tx.txHash,
+          tx.txId,
           tx.from,
           fromProfile?.name || "",
           fromProfile?.picture || "",
@@ -185,9 +185,9 @@ export default function ExportCSVButton({
           row
             .map((field) =>
               typeof field === "string" &&
-              (field.includes(",") ||
-                field.includes('"') ||
-                field.includes("\n"))
+                (field.includes(",") ||
+                  field.includes('"') ||
+                  field.includes("\n"))
                 ? `"${field.replace(/"/g, '""')}"`
                 : field
             )

@@ -13,8 +13,8 @@ import Link from "next/link";
 import { TransactionRow } from "./TransactionRow";
 
 export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
-  const { chainId, txHash } = decomposeURI(uri);
-  const [txDetails, isLoading] = useTxDetails(chain, txHash);
+  const { chainId, txId } = decomposeURI(uri);
+  const [txDetails, isLoading, error] = useTxDetails(chain, txId);
   const [isExpanded, setIsExpanded] = useState(false);
 
   let chainConfig: ChainConfig | undefined;
@@ -29,6 +29,9 @@ export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
 
   if (isLoading) {
     return <div>Loading...</div>;
+  }
+  if (error) {
+    return <div>Error loading transaction details: {error.message}</div>;
   }
   if (!txDetails) {
     return <div>No tx details...</div>;
@@ -54,9 +57,9 @@ export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
           <div className="space-y-2">
             <div className="text-sm font-semibold">Transaction Hash</div>
             <div className="flex flex-row gap-2 h-7 items-center">
-              <CopyableValue value={txHash ?? ""} truncate />
+              <CopyableValue value={txId ?? ""} truncate />
               <a
-                href={`${chainConfig?.explorer_url}/tx/${txHash}`}
+                href={`${chainConfig?.explorer_url}/tx/${txId}`}
                 target="_blank"
                 title={`View transaction on ${chainConfig?.explorer_name}`}
                 rel="noopener noreferrer"
@@ -71,7 +74,7 @@ export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
             <div className="text-sm font-semibold">Token</div>
             <div className="flex gap-2 h-7 items-center">
               <Link
-                href={`/${chain}/token/${token?.address}`}
+                href={`/${String(chain)}/token/${token?.address}`}
                 title={`View ${token?.symbol} token on TxInfo`}
               >
                 <span className="text-base">{token?.name}</span>

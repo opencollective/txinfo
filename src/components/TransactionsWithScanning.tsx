@@ -218,15 +218,16 @@ export default function Transactions({ address, chain }: Props) {
               "switching to rpc",
               rpc[errorCount % rpc.length]
             );
-            provider.current = new JsonRpcProvider(
-              rpc[errorCount % rpc.length]
-            );
+            provider.current = createProvider({
+              type: chainConfig.type,
+              rpcUrl: rpc[errorCount % rpc.length]
+            });
           }
         }
 
         setTransactions((prevTxs) => {
           const uniques = allTransactions.current.filter((tx: Transaction) => {
-            const isDuplicate = prevTxs.some((t) => t.txHash === tx.txHash);
+            const isDuplicate = prevTxs.some((t) => t.txId === tx.txId);
             // if (isDuplicate) {
             //   console.log("!!! duplicate", tx);
             // }
@@ -266,7 +267,7 @@ export default function Transactions({ address, chain }: Props) {
         generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, txHash: tx.txHash })
+        generateURI("ethereum", { chainId: chainConfig.id, txId: tx.txId })
       );
     });
 

@@ -1,10 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { formatInTimeZone } from "date-fns-tz";
-import { Address, ChainConfig, ChainModel, ProfileData, URI } from "@/types";
+import { Address, ChainConfig, ProfileData, URI } from "@/types";
 import { npubEncode } from "nostr-tools/nip19";
 import chains from "@/chains.json";
 import { NostrNote } from "@/providers/NostrProvider";
+import { ProviderType } from "@/utils/rpcProvider";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -103,8 +104,8 @@ export function formatTimestamp(ts: number, format = "MMM d HH:mm"): string {
 }
 
 export function generateURI(
-  model: ChainModel,
-  params: { chainId?: number; txHash?: string; address?: string }
+  model: ProviderType,
+  params: { chainId?: number; txId?: string; address?: string }
 ): URI {
   let parts: (string | number)[] = [model];
   switch (model) {
@@ -112,9 +113,9 @@ export function generateURI(
       if (params.chainId) {
         parts.push(params.chainId);
       }
-      if (params.txHash) {
+      if (params.txId) {
         parts.push("tx");
-        parts.push(params.txHash);
+        parts.push(params.txId);
       } else if (params.address) {
         parts.push("address");
         parts.push(params.address);
@@ -122,13 +123,13 @@ export function generateURI(
         throw new Error("Invalid parameters: " + JSON.stringify(params));
       }
       return parts.join(":").toLowerCase() as URI;
-    case "rosetta":
+    case "stacks":
       if (params.chainId) {
         parts.push(params.chainId);
       }
-      if (params.txHash) {
+      if (params.txId) {
         parts.push("tx");
-        parts.push(params.txHash);
+        parts.push(params.txId);
       } else if (params.address) {
         parts.push("address");
         parts.push(params.address);
@@ -136,6 +137,8 @@ export function generateURI(
         throw new Error("Invalid parameters: " + JSON.stringify(params));
       }
       return parts.join(":").toLowerCase() as URI;
+    default:
+      return parts.join(":").toLowerCase() as URI; // Default case for other models
   }
 }
 
@@ -236,8 +239,7 @@ type URIObject = {
   blockchain: string;
   addressType: string;
   chainId?: number;
-  txHash?: string;
-  txid?: string;
+  txId?: string;
   address?: string;
 };
 
@@ -250,19 +252,33 @@ export function decomposeURI(uri: string): URIObject {
       addressType,
     };
     if (addressType === "tx") {
-      res.txHash = value;
+      res.txId = value;
     } else if (addressType === "address") {
       res.address = value;
     }
     return res;
   } else if (uri.startsWith("bitcoin")) {
-    const [blockchain, addressType, value] = uri.split(":");
+    const [blockchain, chainId, addressType, value] = uri.split(":");
     const res: URIObject = {
       blockchain,
+      chainId: parseInt(chainId),
       addressType,
     };
     if (addressType === "tx") {
-      res.txid = value;
+      res.txId = value;
+    } else if (addressType === "address") {
+      res.address = value;
+    }
+    return res;
+  } else if (uri.startsWith("stacks")) {
+    const [blockchain, chainId, addressType, value] = uri.split(":");
+    const res: URIObject = {
+      blockchain,
+      chainId: parseInt(chainId),
+      addressType,
+    };
+    if (addressType === "tx") {
+      res.txId = value;
     } else if (addressType === "address") {
       res.address = value;
     }

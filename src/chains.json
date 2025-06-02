@@ -16,7 +16,7 @@
       "https://rpc.eth.gateway.fm",
       "https://eth.meowrpc.com"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "polygon": {
     "id": 137,
@@ -34,7 +34,7 @@
       "wss://polygon-bor-rpc.publicnode.com",
       "wss://polygon.llamarpc.com"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "celo": {
     "id": 42220,
@@ -57,7 +57,7 @@
       "wss://celo.drpc.org",
       "wss://celo-bor-rpc.publicnode.com"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "avalanche": {
     "id": 43114,
@@ -69,7 +69,7 @@
       "https://1rpc.io/avax/c",
       "https://avalanche.public-rpc.com"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "optimism": {
     "id": 10,
@@ -82,7 +82,7 @@
       "https://mainnet.optimism.io",
       "https://gateway.tenderly.co/public/optimism"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "arbitrum": {
     "id": 42161,
@@ -96,7 +96,7 @@
       "https://arb-pokt.nodies.app",
       "https://rpc.ankr.com/arbitrum"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "base": {
     "id": 8453,
@@ -118,14 +118,14 @@
       "wss://base.llamarpc.com",
       "wss://base.meowrpc.com/ws"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "ethereum_sepolia": {
     "id": 11155111,
     "explorer_url": "https://sepolia.etherscan.io",
     "explorer_name": "Etherscan Sepolia",
     "rpc": "https://sepolia.drpc.org",
-    "type": "evm"
+    "type": "ethereum"
   },
   "gnosis": {
     "id": 100,
@@ -145,7 +145,7 @@
       "wss://gnosis-rpc.publicnode.com",
       "wss://gnosis-pokt.nodies.app/ws"
     ],
-    "type": "evm"
+    "type": "ethereum"
   },
   "stacks": {
     "id": 1,

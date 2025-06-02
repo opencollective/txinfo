@@ -1,19 +1,20 @@
 "use client";
 
-import { ethers, Log, JsonRpcProvider } from "ethers";
-import ERC20_ABI from "../erc20.abi.json";
-import chains from "../chains.json";
-import { useState, useEffect, useRef } from "react";
 import type {
-  Transaction,
-  Token,
-  EtherscanTransfer,
-  Address,
-  TxHash,
   BlockchainTransaction,
-  ChainConfig,
+  Chain,
+  Transaction,
 } from "@/types/index.d.ts";
+import { Client } from "@stacks/blockchain-api-client";
+import { paths as stacksApiPaths } from "@stacks/blockchain-api-client/lib/generated/schema";
+import { Client as TokenClient } from "@hirosystems/token-metadata-api-client";
+import { paths as stacksTokenPaths } from "@hirosystems/token-metadata-api-client/lib/generated/schema";
+import { ethers, JsonRpcProvider } from "ethers";
+import ERC20_ABI from "../erc20.abi.json";
+import { TxReceipt } from "./crypto";
 import * as crypto from "./crypto.server";
+import { blockToTxBatch, eventToLogEvent } from "./helpers-stacks";
+import { c32addressDecode } from "c32check";
 export const truncateAddress = crypto.truncateAddress;
 
 const cache = {};
@@ -65,11 +66,26 @@ export const getBlockTimestamp = async (
   return block.timestamp;
 };
 
+export const isContractAddress = (address: string): boolean => {
+  const [contractAddress, contractName] = address.split(".");
+
+  try {
+    return (
+      c32addressDecode(contractAddress) !== null && contractName?.length > 0
+    );
+  } catch (e) {
+    console.log(contractAddress, e);
+    return false;
+  }
+};
+
 export async function getTokenDetails(
   chain: string,
-  contractAddress: string,
-  provider: JsonRpcProvider
+  assetId: `${string}.${string}:${string}`,
+  client: TokenClient<stacksTokenPaths, `${string}/${string}`>
 ) {
+  const [contractAddress, asset] = assetId.split("::");
+
   try {
     // Check cache first
     const key = `${chain}:${contractAddress}`;
@@ -81,22 +97,29 @@ export async function getTokenDetails(
     }
 
     // Validate contract address
-    if (!ethers.isAddress(contractAddress)) {
+    if (!isContractAddress(contractAddress)) {
       throw new Error(`Invalid contract address: ${contractAddress}`);
     }
 
-    const contract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
-
-    const [name, symbol, decimals] = await Promise.all([
-      contract.name(),
-      contract.symbol(),
-      contract.decimals(),
-    ]);
+    const token = await client
+      .GET("/metadata/v1/ft/{principal}", {
+        params: {
+          path: {
+            principal: contractAddress,
+          },
+        },
+      })
+      .then((r) => r.data);
+    if (!token || !token.name || !token.symbol || !token.decimals) {
+      throw new Error(
+        `Token details not found for contract address: ${contractAddress}`
+      );
+    }
 
     const tokenDetails = {
-      name,
-      symbol,
-      decimals: Number(decimals),
+      name: token.name,
+      symbol: token.symbol,
+      decimals: Number(token.decimals),
       address: contractAddress,
     };
 
@@ -120,218 +143,96 @@ export async function getTokenDetails(
   }
 }
 
-type LogEvent = {
-  name: string;
-  args: string[];
-  address: string;
-};
-
-interface TxDetails extends BlockchainTransaction {
-  token: Token;
-  events: LogEvent[];
+export async function getTxBatch(
+  blockHeight: number,
+  client: Client<stacksApiPaths, `${string}/${string}`>
+) {
+  return await client
+    .GET(`/extended/v2/blocks/{height_or_hash}/transactions`, {
+      params: {
+        path: {
+          height_or_hash: blockHeight,
+        },
+      },
+    })
+    .then((r) => r.data)
+    .then(blockToTxBatch);
 }
-
-export function useTxDetails(chain: string, txHash?: string) {
-  const [txDetails, setTxDetails] = useState<TxDetails | null>(null);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
-  if (!chainConfig) {
-    throw new Error(`Chain not found: ${chain}`);
-  }
-  const provider = useRef(new JsonRpcProvider(chainConfig.rpc[0]));
-
-  useEffect(() => {
-    const fetchToken = async () => {
-      if (!txHash) return;
-      try {
-        const txReceipt = await getTxReceipt(chain, txHash, provider.current);
-        if (!txReceipt) return;
-        const token = await getTokenDetails(
-          chain,
-          txReceipt.contract_address,
-          provider.current
-        );
-        const tx: Partial<Transaction> = {
-          token,
-          timestamp: txReceipt.timestamp,
-          txHash: txReceipt.hash as TxHash,
-        };
-        txReceipt.events.forEach((event: LogEvent) => {
-          if (event.name === "Transfer") {
-            tx.from = event.args[0] as Address;
-            tx.to = event.args[1] as Address;
-            tx.value = event.args[2];
-          }
-        });
-        setTxDetails(tx as TxDetails);
-        setIsLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error("Unknown error"));
-        setIsLoading(false);
-      }
-    };
-    fetchToken();
-  }, [chain, txHash]);
-
-  return [txDetails, isLoading, error] as const;
-}
-
-export async function getAddressType(
-  chain: string,
-  address: string,
-  provider: JsonRpcProvider
-): Promise<"eoa" | "contract" | "token" | undefined> {
-  const key = `${chain}:${address}:type`;
-  const cached = localStorage.getItem(key);
-  if (cached) {
-    return cached as "eoa" | "contract" | "token";
-  }
-  const code = await provider.getCode(address);
-  let res: "eoa" | "contract" | "token" | undefined;
-  if (code === "0x") {
-    console.log(`${address} is an EOA (Externally Owned Account).`);
-    res = "eoa";
-  } else {
-    console.log(`${address} is a Smart Contract.`);
-
-    // Proxy-related signatures and patterns
-    const proxySlotSig =
-      "360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"; // ERC-1967 implementation slot
-
-    // Check if it's a proxy
-    const isProxy = code.includes(proxySlotSig);
-
-    if (isProxy) {
-      // For proxies, we should check the implementation contract
-      try {
-        const contract = new ethers.Contract(address, ERC20_ABI, provider);
-        await Promise.all([
-          contract.name(),
-          contract.symbol(),
-          contract.decimals(),
-        ]);
-        res = "token"; // If ERC20 calls succeed, it's a token proxy
-      } catch {
-        console.log(">>> isERC20Proxy", address, "failed");
-        res = "contract"; // If ERC20 calls fail, it's some other kind of proxy
-      }
-    } else {
-      // Common ERC20 function signatures
-      const transferSig = "a9059cbb"; // transfer(address,uint256)
-      const balanceOfSig = "70a08231"; // balanceOf(address)
-      const totalSupplySig = "18160ddd"; // totalSupply()
-
-      // Check if the bytecode contains these signatures
-      const hasTransfer = code.includes(transferSig);
-      const hasBalanceOf = code.includes(balanceOfSig);
-      const hasTotalSupply = code.includes(totalSupplySig);
-
-      // If it has at least these core ERC20 functions, it's likely a token
-      if (hasTransfer && hasBalanceOf && hasTotalSupply) {
-        res = "token";
-      } else {
-        res = "contract";
-      }
-    }
-  }
-  setItem(key, res);
-  return res;
-}
-
-type TxReceipt = {
-  chainId: number;
-  hash: string;
-  blockNumber: number;
-  timestamp: number;
-  events: LogEvent[];
-  contract_address: string;
-};
 
 export async function getTxReceipt(
-  chain: string,
-  tx_hash: string,
-  provider: JsonRpcProvider
+  chain: Chain,
+  txId: string,
+  client: Client<stacksApiPaths, `${string}/${string}`>
 ): Promise<TxReceipt | null> {
-  const tx = await provider.getTransaction(tx_hash);
-  if (!tx?.to) return null;
-
-  if (localStorage.getItem(`TxReceipt:${tx.hash}`)) {
-    return JSON.parse(localStorage.getItem(`TxReceipt:${tx.hash}`) || "{}");
+  const txResponse = await client.GET(`/extended/v1/tx/{tx_id}`, {
+    params: {
+      path: {
+        tx_id: txId,
+      },
+    },
+  });
+  console.log("txResponse", txResponse);
+  // convert txResponse to TxReceipt
+  const tx = txResponse.data;
+  // ignore tx that are not confirmed
+  if (
+    !tx ||
+    !tx.tx_id ||
+    tx.tx_status === "pending" ||
+    tx.tx_status === "dropped_replace_by_fee" ||
+    tx.tx_status === "dropped_problematic" ||
+    tx.tx_status === "dropped_replace_across_fork" ||
+    tx.tx_status === "dropped_stale_garbage_collect" ||
+    tx.tx_status === "dropped_too_expensive"
+  ) {
+    console.error("Transaction not found:", txId);
+    return null;
   }
 
-  const contract = new ethers.Contract(tx.to, ERC20_ABI, provider);
-  const receipt = await provider.getTransactionReceipt(tx_hash);
-
-  if (!receipt) return null;
-  const blockNumber = receipt?.blockNumber;
-  const timestamp = await getBlockTimestamp(chain, blockNumber, provider);
-
-  try {
-    const decoded = contract.interface.parseTransaction({ data: tx.data });
-
-    let contract_address = tx.to;
-    // Parse all logs from the receipt
-    const processLog = (log: Log) => {
-      try {
-        // Create a new contract instance with the log's address
-        const logContract = new ethers.Contract(
-          log.address,
-          ERC20_ABI,
-          provider
-        );
-        const parsedLog = logContract.interface.parseLog({
-          topics: log.topics,
-          data: log.data,
-        });
-
-        // If we find a Transfer event, this is likely the main token contract
-        if (parsedLog?.name === "Transfer") {
-          contract_address = log.address;
-        }
-
-        return {
-          name: parsedLog?.name,
-          args: Array.from(parsedLog?.args || []),
-          address: log.address,
-        };
-      } catch (err) {
-        console.log("Could not parse log:", log, err);
+  switch (tx.tx_status) {
+    case "success":
+    case "abort_by_response":
+    case "abort_by_post_condition":
+      if (typeof tx.block_height !== "number") {
+        console.error("Confirmed transaction missing block_height:", txId);
         return null;
       }
-    };
 
-    const events = receipt?.logs.map(processLog);
-    const filteredEvents = events.filter((e) => Boolean(e?.name)); // Remove null entries
+      const blockNumber = tx.block_height;
+      if (tx.event_count === 0) {
+        return null;
+      }
 
-    const res = {
-      chainId: Number(tx.chainId),
-      hash: tx.hash,
-      blockNumber,
-      timestamp,
-      contract_address, // This might be different from tx.to if it's a proxy
-      events: filteredEvents,
-    };
+      const event = tx.events.find(
+        (e) => e.event_type === "fungible_token_asset"
+      );
+      const contract_address = event?.asset.asset_id;
+      if (!contract_address) {
+        console.error("Transaction does not have a token:", txId);
+        return null;
+      }
+      const res = {
+        chainId: 1,
+        hash: tx.tx_id,
+        blockNumber,
+        timestamp: tx.block_time,
+        contract_address: contract_address,
+        events: tx.events.map(eventToLogEvent),
+      };
+      console.log("getTxReceipt", res);
+      setItem(
+        `TxReceipt:${tx.tx_id}`,
+        JSON.stringify(res, (_, value) =>
+          typeof value === "bigint" ? value.toString() : value
+        )
+      );
 
-    setItem(
-      `TxReceipt:${tx.hash}`,
-      JSON.stringify(res, (_, value) =>
-        typeof value === "bigint" ? value.toString() : value
-      )
-    );
+      return res as TxReceipt;
 
-    return res as TxReceipt;
-  } catch (error) {
-    console.error("Error decoding transaction:", error);
-    return {
-      chainId: Number(tx.chainId),
-      hash: tx.hash,
-      blockNumber,
-      timestamp,
-      contract_address: tx.to,
-      events: [],
-    };
+    default:
+      // Unknown status
+      console.error("Unknown tx_status:", tx.tx_status);
+      return null;
   }
 }
 
@@ -486,32 +387,6 @@ export async function getBlockRange(
   return res.filter((tx) => tx !== null) as BlockchainTransaction[];
 }
 
-export async function getTxFromLog(
-  chain: string,
-  log: Log,
-  provider: JsonRpcProvider
-): Promise<BlockchainTransaction> {
-  const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
-  const parsedLog = contract.interface.parseLog(log);
-  const from = parsedLog?.args[0].toLowerCase() as Address;
-  const to = parsedLog?.args[1].toLowerCase() as Address;
-  const value = parsedLog?.args[2].toString();
-  const block = await provider.getBlock(log.blockNumber);
-  const token = await getTokenDetails(chain, log.address, provider);
-  const tx = {
-    blockNumber: log.blockNumber,
-    timestamp: block?.timestamp as number,
-    txIndex: log.transactionIndex,
-    logIndex: log.index,
-    txHash: log.transactionHash as TxHash,
-    token,
-    from,
-    to,
-    value,
-  };
-  return tx;
-}
-
 /**
  * Get the first and last block for an address
  * @param chain - The chain to get the block range for
@@ -542,160 +417,4 @@ export async function getBlockRangeForAddress(
     console.log(">>> no transactions found for", chain, address);
     return null;
   }
-}
-
-const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
-  if (!Array.isArray(data)) return [];
-  return data.map((tx: EtherscanTransfer) => ({
-    blockNumber: Number(tx.blockNumber),
-    txHash: tx.hash,
-    txIndex: Number(tx.transactionIndex),
-    timestamp: Number(tx.timeStamp),
-    from: tx.from,
-    to: tx.to,
-    value: tx.value,
-    token: {
-      address: tx.contractAddress,
-      name: tx.tokenName,
-      decimals: Number(tx.tokenDecimal) || 18,
-      symbol: tx.tokenSymbol,
-    },
-  }));
-};
-
-export async function getTransactionsFromEtherscan(
-  chain: string,
-  address?: string,
-  tokenAddress?: string
-): Promise<null | BlockchainTransaction[]> {
-  const key = `${chain}:${address}${
-    tokenAddress ? `:${tokenAddress}` : ""
-  }`.toLowerCase();
-  const cached = localStorage.getItem(key);
-  if (cached) {
-    const cachedObject = JSON.parse(cached);
-    if (cachedObject.transactions.length === 0 || cachedObject.version !== 1) {
-      localStorage.removeItem(key);
-    } else {
-      if (cachedObject.timestamp > Date.now() - 1000 * 60 * 60) {
-        console.log(">>> getTransactionsFromEtherscan: cache hit", key);
-
-        return cachedObject.transactions;
-      } else if (
-        cachedObject.timestamp >
-        Date.now() - 1000 * 60 * 60 * 24 * 7
-      ) {
-        // 7 days
-        // We return the cached transactions and update the cache
-        console.log(">>> getTransactionsFromEtherscan: updating cache", key);
-        localStorage.removeItem(key);
-        getTransactionsFromEtherscan(chain, address, tokenAddress);
-        return cachedObject.transactions;
-      }
-    }
-  }
-
-  const params = new URLSearchParams({
-    chain,
-    module: "account",
-    action: "tokentx",
-    startblock: "0",
-    endblock: "99999999",
-    sort: "desc",
-  });
-
-  // Add optional filters
-  if (address) {
-    const provider = new JsonRpcProvider(
-      chains[chain as keyof typeof chains].rpc[0]
-    );
-    const addressType = await getAddressType(chain, address, provider);
-    switch (addressType) {
-      case "eoa":
-      case "contract":
-        params.set("address", address);
-        break;
-      case "token":
-        params.set("contractaddress", address);
-        break;
-    }
-  }
-  if (tokenAddress) {
-    params.set("contractaddress", tokenAddress);
-  }
-
-  const apicall = `${
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_WEBSITE_URL
-  }/api/etherscan?${params.toString()}`;
-  const response = await fetch(apicall);
-  try {
-    const data = await response.json();
-    const res = convertEtherscanDataToTransactionType(data);
-    if (res.length > 0) {
-      setItem(
-        key,
-        JSON.stringify({ transactions: res, timestamp: Date.now(), version: 1 })
-      );
-      return res;
-    } else {
-      console.log(
-        ">>> getTransactionsFromEtherscan: no transactions found",
-        key
-      );
-      return null;
-    }
-  } catch (e) {
-    console.error("Error in getTransactionsFromEtherscan:", e);
-    return null;
-  }
-}
-
-export function useTokenDetails(chain: string, contractAddress: string) {
-  const [token, setToken] = useState<{
-    name: string;
-    symbol: string;
-    decimals: number;
-    address: string;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    const fetchToken = async () => {
-      if (!chain || !contractAddress) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const chainConfig = chains[chain as keyof typeof chains];
-        if (!chainConfig) {
-          throw new Error(`Chain not found: ${chain}`);
-        }
-
-        const provider = new JsonRpcProvider(chainConfig.rpc[0]);
-        const tokenDetails = await getTokenDetails(
-          chain,
-          contractAddress,
-          provider
-        );
-
-        setToken(tokenDetails);
-      } catch (err) {
-        console.error("Error in useTokenDetails:", err);
-        setError(err instanceof Error ? err : new Error("Unknown error"));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchToken();
-  }, [chain, contractAddress]);
-
-  return [token, isLoading, error] as const;
 }

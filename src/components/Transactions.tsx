@@ -178,8 +178,8 @@ export default function Transactions({
   const filteredTransactions = useMemo(() => {
     return transactions.length > 0
       ? transactions.filter((tx) =>
-          applyTxFilter(tx, transactionsFilter, accountAddress)
-        )
+        applyTxFilter(tx, transactionsFilter, accountAddress)
+      )
       : [];
   }, [transactions, transactionsFilter, accountAddress]);
 
@@ -255,7 +255,7 @@ export default function Transactions({
         generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, txHash: tx.txHash })
+        generateURI("ethereum", { chainId: chainConfig.id, txId: tx.txId })
       );
     });
     const urisArray = Array.from(uris) as URI[];
@@ -277,8 +277,8 @@ export default function Transactions({
     transactionsFilter.selectedTokens.length > 0
       ? transactionsFilter.selectedTokens
       : availableTokens.length === 1
-      ? availableTokens
-      : [];
+        ? availableTokens
+        : [];
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -311,7 +311,7 @@ export default function Transactions({
       {currentPageTxs.map((tx, idx) => {
         return (
           <TransactionRow
-            key={`${tx.txHash}-${idx}`}
+            key={`${tx.txId}-${idx}`}
             tx={tx}
             chain={chain}
             chainId={chainConfig.id}

@@ -42,7 +42,7 @@ export type TokenStats = {
   netValue: number;
 };
 export interface Transaction {
-  txHash: TxHash;
+  txId: TxHash;
   timestamp: number;
   from: Address;
   to: Address;
@@ -104,7 +104,7 @@ export type ChainConfig = {
   type: ProviderType;
 };
 
-export type Chain = keyof typeof chains;
+export type Chain = Extract<keyof typeof chains, string>;
 
 export type ProfileData = {
   uri: URI;
@@ -118,4 +118,10 @@ export type ProfileData = {
 export type TxBatch = {
   txs: TxHash[];
   timestamp: number;
+};
+
+export type LogEvent = {
+  name: "Transfer";
+  args: string[];
+  address: string;
 };

@@ -49,13 +49,13 @@ class Database extends Dexie {
     // Check which transactions already exist
     const existingTxHashes = await this.transactions
       .where("tx_hash")
-      .anyOf(transactions.map((tx) => tx.txHash))
+      .anyOf(transactions.map((tx) => tx.txId))
       .toArray()
-      .then((txs) => new Set(txs.map((tx) => tx.txHash)));
+      .then((txs) => new Set(txs.map((tx) => tx.txId)));
 
     // Filter out existing transactions
     const newTxs = transactions
-      .filter((tx) => !existingTxHashes.has(tx.txHash))
+      .filter((tx) => !existingTxHashes.has(tx.txId))
       .map((tx) => ({
         ...tx,
         chain,
@@ -83,7 +83,7 @@ class Database extends Dexie {
     // Combine, deduplicate, and sort
     const txMap = new Map();
     [...fromTxs, ...toTxs].forEach((tx) => {
-      txMap.set(tx.txHash, tx);
+      txMap.set(tx.txId, tx);
     });
 
     return Array.from(txMap.values()).sort((a, b) => b.timestamp - a.timestamp);

@@ -20,7 +20,7 @@ export function txToTransaction(
   }
 
   return {
-    txHash: tx.hash as TxHash,
+    txId: tx.hash as TxHash,
     // TODO
     timestamp: 0,
     from: tx.from as HexString<42>,

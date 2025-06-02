@@ -6,6 +6,7 @@ import type {
   Chain,
   ChainConfig,
   EtherscanTransfer,
+  LogEvent,
   Token,
   Transaction,
   TxHash,
@@ -34,7 +35,7 @@ const localStorage =
         },
       };
 
-const setItem = (key: string, value: string) => {
+export const setItem = (key: string, value: string) => {
   try {
     localStorage.setItem(key, value);
   } catch (err) {
@@ -53,7 +54,7 @@ export const getBlockTimestamp = async (
   blockNumber: number,
   provider: TxBatchProvider
 ) => {
-  const key = `${chain}:${blockNumber}`;
+  const key = `${String(chain)}:${blockNumber}`;
   const cached = localStorage.getItem(key);
   if (cached) {
     return JSON.parse(cached);
@@ -121,19 +122,12 @@ export async function getTokenDetails(
     };
   }
 }
-
-type LogEvent = {
-  name: string;
-  args: string[];
-  address: string;
-};
-
 interface TxDetails extends BlockchainTransaction {
   token: Token;
   events: LogEvent[];
 }
 
-export function useTxDetails(chain: Chain, txHash?: string) {
+export function useTxDetails(chain: Chain, txId?: string) {
   const [txDetails, setTxDetails] = useState<TxDetails | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -151,19 +145,32 @@ export function useTxDetails(chain: Chain, txHash?: string) {
 
   useEffect(() => {
     const fetchToken = async () => {
-      if (!txHash) return;
+      console.log("useTxDetails", chain, txId);
+      if (!txId) {
+        setError(new Error("Transaction id is required"));
+        setIsLoading(false);
+        return;
+      }
       try {
-        const txReceipt = await provider.current.getTxReceipt(chain, txHash);
-        if (!txReceipt) return;
+        const txReceipt = await provider.current.getTxReceipt(chain, txId);
+        if (!txReceipt) {
+          setError(new Error("Transaction not found"));
+          setIsLoading(false);
+          return;
+        }
         const token = await provider.current.getTokenDetails(
           chain,
           txReceipt.contract_address
         );
-        if (!token) return;
+        if (!token) {
+          setError(new Error("Token not found"));
+          setIsLoading(false);
+          return;
+        }
         const tx: Partial<Transaction> = {
           token,
           timestamp: txReceipt.timestamp,
-          txHash: txReceipt.hash as TxHash,
+          txId: txReceipt.hash as TxHash,
         };
         txReceipt.events.forEach((event: LogEvent) => {
           if (event.name === "Transfer") {
@@ -181,7 +188,7 @@ export function useTxDetails(chain: Chain, txHash?: string) {
       }
     };
     fetchToken();
-  }, [chain, txHash]);
+  }, [chain, txId]);
 
   return [txDetails, isLoading, error] as const;
 }
@@ -451,7 +458,10 @@ export async function getBlockRangeForAddress(
   //   return JSON.parse(cached);
   // }
 
-  const transactions = await getTransactionsFromEtherscan(chain, address);
+  const transactions = await getTransactionsFromEtherscan(
+    String(chain),
+    address
+  );
   if (transactions) {
     const firstBlock = Number(transactions[0].blockNumber);
     const lastBlock =
