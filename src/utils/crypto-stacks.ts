@@ -66,29 +66,28 @@ export const getBlockTimestamp = async (
   return block.timestamp;
 };
 
-export const isContractAddress = (address: string): boolean => {
-  const [contractAddress, contractName] = address.split(".");
-
+export const isStacksAddress = (address: string): boolean => {
   try {
-    return (
-      c32addressDecode(contractAddress) !== null && contractName?.length > 0
-    );
+    return c32addressDecode(address.toUpperCase()) !== null;
   } catch (e) {
-    console.log(contractAddress, e);
+    console.log(address, e);
     return false;
   }
 };
 
+export const isContractAddress = (address: string): boolean => {
+  const [contractAddress, contractName] = address.split(".");
+  return isStacksAddress(contractAddress) !== null && contractName?.length > 0;
+};
+
 export async function getTokenDetails(
   chain: string,
-  assetId: `${string}.${string}:${string}`,
+  contractId: `${string}.${string}`,
   client: TokenClient<stacksTokenPaths, `${string}/${string}`>
 ) {
-  const [contractAddress, asset] = assetId.split("::");
-
   try {
     // Check cache first
-    const key = `${chain}:${contractAddress}`;
+    const key = `${chain}:${contractId}`;
     const cached = localStorage.getItem(key);
     if (cached) {
       const res = JSON.parse(cached);
@@ -97,22 +96,22 @@ export async function getTokenDetails(
     }
 
     // Validate contract address
-    if (!isContractAddress(contractAddress)) {
-      throw new Error(`Invalid contract address: ${contractAddress}`);
+    if (!isContractAddress(contractId)) {
+      throw new Error(`Invalid contract address: ${contractId}`);
     }
 
     const token = await client
       .GET("/metadata/v1/ft/{principal}", {
         params: {
           path: {
-            principal: contractAddress,
+            principal: contractId,
           },
         },
       })
       .then((r) => r.data);
     if (!token || !token.name || !token.symbol || !token.decimals) {
       throw new Error(
-        `Token details not found for contract address: ${contractAddress}`
+        `Token details not found for contract address: ${contractId}`
       );
     }
 
@@ -120,7 +119,7 @@ export async function getTokenDetails(
       name: token.name,
       symbol: token.symbol,
       decimals: Number(token.decimals),
-      address: contractAddress,
+      address: contractId,
     };
 
     // Cache the result
@@ -138,7 +137,7 @@ export async function getTokenDetails(
       name: "Unknown Token",
       symbol: "???",
       decimals: 18,
-      address: contractAddress,
+      address: contractId,
     };
   }
 }
@@ -206,7 +205,7 @@ export async function getTxReceipt(
       const event = tx.events.find(
         (e) => e.event_type === "fungible_token_asset"
       );
-      const contract_address = event?.asset.asset_id;
+      const contract_address = event?.asset.asset_id.split("::")[0];
       if (!contract_address) {
         console.error("Transaction does not have a token:", txId);
         return null;
@@ -249,7 +248,8 @@ export async function processBlockRange(
   address: string,
   fromBlock: number,
   toBlock: number,
-  provider: JsonRpcProvider
+  client: Client<stacksApiPaths, `${string}/${string}`>,
+  tokenClient: TokenClient<stacksTokenPaths, `${string}/${string}`>
 ): Promise<Transaction[]> {
   const key =
     `${chain}:${address}[${fromBlock}-${toBlock}]-processed`.toLowerCase();
@@ -261,16 +261,20 @@ export async function processBlockRange(
   // }
   localStorage.removeItem(key); // remove previous cache
 
-  const txs = await getBlockRange(chain, address, fromBlock, toBlock, provider);
+  const txs = await getBlockRange(chain, address, fromBlock, toBlock, client);
   if (txs.length > 0) {
     const newTxs: Transaction[] = await Promise.all(
       txs.map(async (tx: BlockchainTransaction) => {
         const timestamp = await getBlockTimestamp(
           chain,
           tx.blockNumber,
-          provider
+          client
         );
-        const token = await getTokenDetails(chain, tx.token.address, provider);
+        const token = await getTokenDetails(
+          chain,
+          tx.token.address as `${string}.${string}`,
+          tokenClient
+        );
         return {
           ...tx,
           timestamp,

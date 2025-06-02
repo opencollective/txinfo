@@ -14,6 +14,7 @@ import type {
   URI,
   Transaction,
   BlockchainTransaction,
+  ChainConfig,
 } from "@/types";
 import { useNostr } from "@/providers/NostrProvider";
 import StatsCards from "./StatsCards";
@@ -109,7 +110,7 @@ export default function Transactions({
     notesByURIRef.current = notesByURI;
   }, [notesByURI]);
 
-  const chainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
   const referenceAccount = accountAddress
     ? accountAddress
     : "0x0000000000000000000000000000000000000000";

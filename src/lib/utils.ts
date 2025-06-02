@@ -20,19 +20,26 @@ export const getAddressFromURI = (uri: string): Address => {
 };
 
 export const getChainIdFromURI = (uri: string): number | undefined => {
-  if (uri && uri.startsWith("ethereum")) {
+  if (!uri) {
+    return undefined;
+  }
+  if (uri.startsWith("ethereum")) {
+    return parseInt(uri.split(":")[1]);
+  } else if (uri.startsWith("stacks")) {
     return parseInt(uri.split(":")[1]);
   }
   return undefined;
 };
 
 export const getChainSlugFromChainId = (
+  providerType: ProviderType,
   chainId?: number
 ): string | undefined => {
   if (!chainId) return undefined;
-  return Object.keys(chains).find(
-    (key) => chains[key as keyof typeof chains].id === chainId
-  );
+  return Object.keys(chains).find((key) => {
+    const chainConfig = chains[key as keyof typeof chains] as ChainConfig;
+    return chainConfig.id === chainId && chainConfig.type === providerType;
+  });
 };
 
 export const getProfileFromNote = (

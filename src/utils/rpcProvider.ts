@@ -1,4 +1,4 @@
-import { Address, Chain, Token, Transaction, TxBatch } from "@/types";
+import { Address, Chain, LogEvent, Token, Transaction, TxBatch } from "@/types";
 import { createClient } from "@stacks/blockchain-api-client";
 import { createClient as createTokenClient } from "@hirosystems/token-metadata-api-client";
 import { JsonRpcProvider } from "ethers";
@@ -15,6 +15,12 @@ export interface ProviderConfig {
 }
 
 export interface TxBatchProvider {
+  getBlockNumber(): Promise<number>;
+  getLogs(filter: {
+    fromBlock: number | undefined;
+    toBlock: number;
+    topics: (string | null)[];
+  }): LogEvent[];
   getTxBatch(blockNumber: number): Promise<TxBatch | null>;
   getTransaction(txId: string): Promise<Transaction | null>;
   getTxReceipt(chain: Chain, txId: string): Promise<TxReceipt | null>;
@@ -31,6 +37,12 @@ export function createProvider(config: ProviderConfig): TxBatchProvider {
   if (config.type === "ethereum") {
     const provider = new JsonRpcProvider(config.rpcUrl);
     return {
+      getLogs: (filter) =>
+        provider
+          .getLogs(filter)
+          .then((logs) =>
+            logs.map((log) => EthereumHelpers.logToTransaction(log))
+          ),
       getTxBatch: (blockNumber) =>
         provider.getBlock(blockNumber).then(EthereumHelpers.blockToTxBatch),
       getTransaction: (txId) =>
@@ -67,7 +79,7 @@ export function createProvider(config: ProviderConfig): TxBatchProvider {
       getTokenDetails: async (chain: Chain, tokenContractAddress: string) =>
         Stacks.getTokenDetails(
           chain,
-          tokenContractAddress as `${string}.${string}:${string}`,
+          tokenContractAddress as `${string}.${string}`,
           tokenClient
         ),
       getBlockRange: async (

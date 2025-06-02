@@ -68,60 +68,6 @@ export const getBlockTimestamp = async (
   return block.timestamp;
 };
 
-export async function getTokenDetails(
-  chain: string,
-  contractAddress: string,
-  provider: JsonRpcProvider
-) {
-  try {
-    // Check cache first
-    const key = `${chain}:${contractAddress}`;
-    const cached = localStorage.getItem(key);
-    if (cached) {
-      const res = JSON.parse(cached);
-      res.cached = true;
-      return res;
-    }
-
-    // Validate contract address
-    if (!ethers.isAddress(contractAddress)) {
-      throw new Error(`Invalid contract address: ${contractAddress}`);
-    }
-
-    const contract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
-
-    const [name, symbol, decimals] = await Promise.all([
-      contract.name(),
-      contract.symbol(),
-      contract.decimals(),
-    ]);
-
-    const tokenDetails: Token = {
-      name,
-      symbol,
-      decimals: Number(decimals),
-      address: contractAddress as Address,
-    };
-
-    // Cache the result
-    setItem(
-      key,
-      JSON.stringify(tokenDetails, (_, value) =>
-        typeof value === "bigint" ? value.toString() : value
-      )
-    );
-
-    return tokenDetails;
-  } catch (err) {
-    console.error("Error fetching token details:", err);
-    return {
-      name: "Unknown Token",
-      symbol: "???",
-      decimals: 18,
-      address: contractAddress,
-    };
-  }
-}
 interface TxDetails extends BlockchainTransaction {
   token: Token;
   events: LogEvent[];
@@ -586,14 +532,20 @@ export async function getTransactionsFromEtherscan(
 }
 
 export function useTokenDetails(chain: string, contractAddress: string) {
-  const [token, setToken] = useState<{
-    name: string;
-    symbol: string;
-    decimals: number;
-    address: string;
-  } | null>(null);
+  const [token, setToken] = useState<Token | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  if (!chainConfig) {
+    throw new Error(`Chain not found: ${String(chain)}`);
+  }
+  const provider = useRef(
+    createProvider({
+      type: chainConfig.type,
+      rpcUrl: chainConfig.rpc[0],
+    })
+  );
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -611,11 +563,9 @@ export function useTokenDetails(chain: string, contractAddress: string) {
           throw new Error(`Chain not found: ${chain}`);
         }
 
-        const provider = new JsonRpcProvider(chainConfig.rpc[0]);
-        const tokenDetails = await getTokenDetails(
+        const tokenDetails = await provider.current.getTokenDetails(
           chain,
-          contractAddress,
-          provider
+          contractAddress
         );
 
         setToken(tokenDetails);

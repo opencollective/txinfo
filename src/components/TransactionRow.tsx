@@ -107,7 +107,13 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (profile.name) {
         setFromProfile(profile);
       } else {
-        fetchENSDetails(tx.from);
+        switch (providerType) {
+          case "ethereum":
+            fetchENSDetails(tx.to);
+            break;
+          default:
+          // For other chains, we can use the default profile
+        }
       }
     }
   }, [tx.from, fromProfile.name, fromProfile.uri, getProfileForAddress]);
@@ -132,7 +138,13 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (profile.name) {
         setToProfile(profile);
       } else {
-        fetchENSDetails(tx.to);
+        switch (providerType) {
+          case "ethereum":
+            fetchENSDetails(tx.to);
+            break;
+          default:
+          // For other chains, we can use the default profile
+        }
       }
     }
   }, [tx.to, toProfile.name, toProfile.uri, getProfileForAddress]);
