@@ -14,6 +14,7 @@ import { ProfileData } from "@/types";
 import { cn } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
 import { useRouter } from "next/navigation";
+import { ProviderType } from "@/utils/rpcProvider";
 
 export default function Avatar({
   profile,
@@ -30,8 +31,9 @@ export default function Avatar({
     if (editable) {
       openEditProfileModal(profile.uri, profile);
     } else {
+      const providerType = profile.uri.split(":")[0] as ProviderType;
       const chainId = getChainIdFromURI(profile.uri);
-      const chainName = getChainSlugFromChainId(chainId);
+      const chainName = getChainSlugFromChainId(providerType, chainId);
       const address = getAddressFromURI(profile.uri);
       if (chainName && address) {
         router.push(`/${chainName}/address/${address}`);

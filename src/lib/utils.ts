@@ -5,6 +5,7 @@ import { Address, ChainConfig, ProfileData, URI } from "@/types";
 import { npubEncode } from "nostr-tools/nip19";
 import chains from "@/chains.json";
 import { NostrNote } from "@/providers/NostrProvider";
+import { ProviderType } from "@/utils/rpcProvider";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,19 +20,26 @@ export const getAddressFromURI = (uri: string): Address => {
 };
 
 export const getChainIdFromURI = (uri: string): number | undefined => {
-  if (uri && uri.startsWith("ethereum")) {
+  if (!uri) {
+    return undefined;
+  }
+  if (uri.startsWith("ethereum")) {
+    return parseInt(uri.split(":")[1]);
+  } else if (uri.startsWith("stacks")) {
     return parseInt(uri.split(":")[1]);
   }
   return undefined;
 };
 
 export const getChainSlugFromChainId = (
+  providerType: ProviderType,
   chainId?: number
 ): string | undefined => {
   if (!chainId) return undefined;
-  return Object.keys(chains).find(
-    (key) => chains[key as keyof typeof chains].id === chainId
-  );
+  return Object.keys(chains).find((key) => {
+    const chainConfig = chains[key as keyof typeof chains] as ChainConfig;
+    return chainConfig.id === chainId && chainConfig.type === providerType;
+  });
 };
 
 export const getProfileFromNote = (
@@ -103,23 +111,42 @@ export function formatTimestamp(ts: number, format = "MMM d HH:mm"): string {
 }
 
 export function generateURI(
-  blockchain: string, // ethereum, bitcoin, solana, ...
-  params: { chainId?: number; txHash?: string; address?: string }
+  model: ProviderType,
+  params: { chainId?: number; txId?: string; address?: string }
 ): URI {
-  const parts: (string | number)[] = [blockchain];
-  if (params.chainId) {
-    parts.push(params.chainId);
+  let parts: (string | number)[] = [model];
+  switch (model) {
+    case "ethereum":
+      if (params.chainId) {
+        parts.push(params.chainId);
+      }
+      if (params.txId) {
+        parts.push("tx");
+        parts.push(params.txId);
+      } else if (params.address) {
+        parts.push("address");
+        parts.push(params.address);
+      } else {
+        throw new Error("Invalid parameters: " + JSON.stringify(params));
+      }
+      return parts.join(":").toLowerCase() as URI;
+    case "stacks":
+      if (params.chainId) {
+        parts.push(params.chainId);
+      }
+      if (params.txId) {
+        parts.push("tx");
+        parts.push(params.txId);
+      } else if (params.address) {
+        parts.push("address");
+        parts.push(params.address);
+      } else {
+        throw new Error("Invalid parameters: " + JSON.stringify(params));
+      }
+      return parts.join(":").toLowerCase() as URI;
+    default:
+      return parts.join(":").toLowerCase() as URI; // Default case for other models
   }
-  if (params.txHash) {
-    parts.push("tx");
-    parts.push(params.txHash);
-  } else if (params.address) {
-    parts.push("address");
-    parts.push(params.address);
-  } else {
-    throw new Error("Invalid parameters: " + JSON.stringify(params));
-  }
-  return parts.join(":").toLowerCase() as URI;
 }
 
 export function getNpubFromPubkey(
@@ -219,8 +246,7 @@ type URIObject = {
   blockchain: string;
   addressType: string;
   chainId?: number;
-  txHash?: string;
-  txid?: string;
+  txId?: string;
   address?: string;
 };
 
@@ -233,19 +259,33 @@ export function decomposeURI(uri: string): URIObject {
       addressType,
     };
     if (addressType === "tx") {
-      res.txHash = value;
+      res.txId = value;
     } else if (addressType === "address") {
       res.address = value;
     }
     return res;
   } else if (uri.startsWith("bitcoin")) {
-    const [blockchain, addressType, value] = uri.split(":");
+    const [blockchain, chainId, addressType, value] = uri.split(":");
     const res: URIObject = {
       blockchain,
+      chainId: parseInt(chainId),
       addressType,
     };
     if (addressType === "tx") {
-      res.txid = value;
+      res.txId = value;
+    } else if (addressType === "address") {
+      res.address = value;
+    }
+    return res;
+  } else if (uri.startsWith("stacks")) {
+    const [blockchain, chainId, addressType, value] = uri.split(":");
+    const res: URIObject = {
+      blockchain,
+      chainId: parseInt(chainId),
+      addressType,
+    };
+    if (addressType === "tx") {
+      res.txId = value;
     } else if (addressType === "address") {
       res.address = value;
     }

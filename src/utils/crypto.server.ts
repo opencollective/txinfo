@@ -154,7 +154,7 @@ export async function getTransactions(
   address?: string | null,
   type: "token" | "native" = "token"
 ): Promise<EtherscanTransfer[]> {
-  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
   const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
 
   if (!apikey) {

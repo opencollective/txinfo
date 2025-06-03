@@ -1,6 +1,9 @@
+import { ProviderType } from "@/utils/rpcProvider";
+
 type HexString<Length extends number> = `0x${string}` & { length: Length };
 export type Address = HexString<42>;
 
+// Mainnet Bitcoin addresses
 type BitcoinAddress =
   | `1${string}` // Legacy addresses
   | `3${string}` // P2SH addresses
@@ -39,12 +42,13 @@ export type TokenStats = {
   netValue: number;
 };
 export interface Transaction {
-  txHash: TxHash;
+  txId: TxHash;
   timestamp: number;
   from: Address;
   to: Address;
   value: string;
   token: Token;
+  data?: string;
 }
 
 export interface BlockchainTransaction extends Transaction {
@@ -97,7 +101,10 @@ export type ChainConfig = {
   explorer_name: string;
   rpc: string | string[];
   ws?: string | string[];
+  type: ProviderType;
 };
+
+export type Chain = Extract<keyof typeof chains, string>;
 
 export type ProfileData = {
   uri: URI;
@@ -106,4 +113,15 @@ export type ProfileData = {
   about?: string;
   picture?: string;
   website?: string;
+};
+
+export type TxBatch = {
+  txs: TxHash[];
+  timestamp: number;
+};
+
+export type LogEvent = {
+  name: "Transfer";
+  args: string[];
+  address: string;
 };

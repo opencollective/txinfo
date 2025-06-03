@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import chains from "../chains.json";
-import { ExternalLink, Edit } from "lucide-react";
-import CopyableValue from "./CopyableValue";
+import { Card, CardContent } from "@/components/ui/card";
 import { useNostr } from "@/providers/NostrProvider";
+import { Edit, ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import chains from "../chains.json";
+import CopyableValue from "./CopyableValue";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
-import { getENSDetailsFromAddress } from "@/utils/crypto.server";
 import { generateURI, getProfileFromNote } from "@/lib/utils";
-import type { URI, Address } from "@/types";
+import type { Address, URI } from "@/types";
+import { getENSDetailsFromAddress } from "@/utils/crypto.server";
+import { ProviderType } from "@/utils/rpcProvider";
+import Avatar from "./Avatar";
 import TagsList from "./TagsList";
 import TagValue from "./TagValue";
-import Avatar from "./Avatar";
 
 export default function AddressInfo({
   chain,
@@ -27,10 +28,11 @@ export default function AddressInfo({
   addressType?: "address" | "token" | "eoa" | "contract";
 }) {
   const chainConfig = chains[chain as keyof typeof chains];
+  const providerType = chainConfig.type as ProviderType;
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-  const uri = generateURI("ethereum", { chainId: chainConfig.id, address });
+  const uri = generateURI(providerType, { chainId: chainConfig.id, address });
   subscribeToNotesByURI([uri]);
   const latestNote = notesByURI[uri as URI]?.[0];
   const profileFromNote = getProfileFromNote(latestNote);
@@ -66,7 +68,13 @@ export default function AddressInfo({
       });
     };
     if (!latestNote?.content) {
-      fetchENSDetails();
+      switch (providerType) {
+        case "ethereum":
+          fetchENSDetails();
+          break;
+        default:
+        // For other chains, we do not support name, so we can skip this
+      }
     }
   }, [address, uri, ensName, latestNote]);
 
@@ -123,7 +131,7 @@ export default function AddressInfo({
             <div className="flex flex-wrap items-center gap-2">
               <TagsList tags={latestNote?.tags} kinds={["t", "website"]} />
               <CopyableValue
-                value={address}
+                value={providerType === "stacks" ? address.toUpperCase() : address}
                 className="text-xs bg-transparent"
                 truncate
               />

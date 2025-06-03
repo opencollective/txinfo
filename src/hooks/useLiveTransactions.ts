@@ -3,6 +3,7 @@ import { JsonRpcProvider, WebSocketProvider, Log, ethers } from "ethers";
 import chains from "@/chains.json";
 import { Address, BlockchainTransaction, ChainConfig } from "@/types";
 import { getTxFromLog } from "@/utils/crypto";
+import { createProvider } from "@/utils/rpcProvider";
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 
@@ -65,13 +66,17 @@ export function useLiveTransactions({
   const timePer10Transactions = Math.ceil(
     (60 * 1000) / maxTransactionsPerMinute
   );
-  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
   // if (!chainConfig?.ws) {
   //   console.error(`No WebSocket configuration found for chain ${chain}`);
   //   return null;
   // }
   const httpProvider = useMemo(
-    () => new JsonRpcProvider(chainConfig.rpc[0]),
+    () =>
+      createProvider({
+        type: chainConfig.type,
+        rpcUrl: chainConfig.rpc[0],
+      }),
     [chainConfig]
   );
 
@@ -130,7 +135,6 @@ export function useLiveTransactions({
       fromBlock?: number,
       interval?: number
     ) => {
-      const httpProvider = new JsonRpcProvider(chainConfig.rpc[0]);
       const filters = getFilters(tokenAddress, accountAddress);
       let lastBlock = fromBlock;
       let processingBacklog = false;
@@ -166,7 +170,6 @@ export function useLiveTransactions({
                 toBlock,
               });
               logsReceived += logs.length;
-              await Promise.all(logs.map(throttledProcessLog));
             })
           );
           processingBacklog = false;

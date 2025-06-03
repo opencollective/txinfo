@@ -6,7 +6,7 @@ import Avatar from "@/components/Avatar";
 import { Separator } from "@/components/ui/separator";
 import NotesList from "@/components/NotesList";
 import { useNostr } from "@/providers/NostrProvider";
-import type { Transaction, Address, ProfileData } from "@/types";
+import type { Transaction, Address, ProfileData, Chain } from "@/types";
 import EditMetadataForm from "@/components/EditMetadataForm";
 import TagsList from "./TagsList";
 import {
@@ -16,9 +16,11 @@ import {
   getProfileFromNote,
 } from "@/lib/utils";
 import { getENSDetailsFromAddress } from "@/utils/crypto.server";
+import { ProviderType } from "@/utils/rpcProvider";
+import chains from "@/chains.json";
 interface TransactionRowProps {
   tx: Transaction;
-  chain: string;
+  chain: Chain;
   chainId: number;
 }
 
@@ -26,7 +28,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-
+  const providerType = chains[chain as keyof typeof chains].type as ProviderType;
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
     if (isEditing) {
@@ -38,10 +40,11 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
 
   const getProfileForAddress = useCallback(
     (address: Address): ProfileData => {
-      const uri = generateURI("ethereum", { chainId, address });
+      const uri = generateURI(providerType, { chainId, address });
       subscribeToNotesByURI([uri]);
+
       const defaultProfile = {
-        uri,
+        uri: uri,
         address: address || undefined,
         name: "",
         about: "",
@@ -50,20 +53,32 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       };
       if (!address) return defaultProfile;
       if (!notesByURI[uri]) return defaultProfile;
+
+
       const profile = getProfileFromNote(notesByURI[uri][0]);
       if (!profile) return defaultProfile;
       return profile;
     },
-    [chainId, notesByURI, subscribeToNotesByURI]
+    [chainId, notesByURI, subscribeToNotesByURI, providerType]
   );
+  const isZeroAddress = (address: string): boolean => {
+    switch (providerType) {
+      case "ethereum":
+        return address === "0x0000000000000000000000000000000000000000"
+      default:
+        return false;
+    }
+  }
+
+  console.log(tx);
 
   const defaultFromProfile = getProfileForAddress(
-    tx.from === "0x0000000000000000000000000000000000000000"
+    isZeroAddress(tx.from)
       ? tx.token.address
       : tx.from
   );
   const defaultToProfile = getProfileForAddress(
-    tx.to === "0x0000000000000000000000000000000000000000"
+    isZeroAddress(tx.to)
       ? tx.token.address
       : tx.to
   );
@@ -92,7 +107,13 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (profile.name) {
         setFromProfile(profile);
       } else {
-        fetchENSDetails(tx.from);
+        switch (providerType) {
+          case "ethereum":
+            fetchENSDetails(tx.to);
+            break;
+          default:
+          // For other chains, we can use the default profile
+        }
       }
     }
   }, [tx.from, fromProfile.name, fromProfile.uri, getProfileForAddress]);
@@ -117,7 +138,13 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (profile.name) {
         setToProfile(profile);
       } else {
-        fetchENSDetails(tx.to);
+        switch (providerType) {
+          case "ethereum":
+            fetchENSDetails(tx.to);
+            break;
+          default:
+          // For other chains, we can use the default profile
+        }
       }
     }
   }, [tx.to, toProfile.name, toProfile.uri, getProfileForAddress]);
@@ -127,7 +154,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
     return null;
   }
 
-  const uri = generateURI("ethereum", { chainId, txHash: tx.txHash });
+  const uri = generateURI(providerType, { chainId, txId: tx.txId });
   subscribeToNotesByURI([uri]);
   const lastNote = notesByURI[uri] && notesByURI[uri][0];
 
@@ -136,7 +163,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
   };
 
   return (
-    <div className="space-y-4" key={tx.txHash}>
+    <div className="space-y-4" key={tx.txId}>
       {/* Main Transaction Info */}
       <div className="flex items-start gap-4 flex-row">
         {/* Avatars */}
@@ -165,7 +192,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
               {/* Timestamp is always visible */}
               <div className="flex items-center text-sm">
                 <Link
-                  href={`/${chain}/tx/${tx.txHash}`}
+                  href={`/${String(chain)}/tx/${tx.txId}`}
                   title={formatTimestamp(
                     tx.timestamp,
                     "MMM d, yyyy 'at' HH:mm:ss zzz"
@@ -200,7 +227,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
             <div className="flex items-center justify-between gap-4 text-sm">
               <div className="flex flex-wrap items-center gap-4">
                 <Link
-                  href={`/${chain}/tx/${tx.txHash}`}
+                  href={`/${String(chain)}/tx/${tx.txId}`}
                   title={formatTimestamp(
                     tx.timestamp,
                     "MMM d, yyyy 'at' HH:mm:ss zzz"
@@ -229,7 +256,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
                 Number(ethers.formatUnits(tx.value, tx.token.decimals))
               )}{" "}
             </span>
-            <Link href={`/${chain}/token/${tx.token.address}`}>
+            <Link href={`/${String(chain)}/token/${tx.token.address}`}>
               <span className="text-sm font-normal text-muted-foreground">
                 {tx.token.symbol?.substring(0, 6)}
               </span>
