@@ -6,7 +6,7 @@ export async function GET(req: Request) {
   const contractAddress = searchParams.get("address");
   const chain = searchParams.get("chain");
   const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
-  const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
+  const apikey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
   if (!apikey) {
     console.error("No API key found for", chainConfig.explorer_api);
     console.error(
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     );
     return Response.json({ error: "API key not configured" }, { status: 500 });
   }
-  const apicall = `${chainConfig.explorer_api}/api?module=contract&action=getcontractcreation&contractaddresses=${contractAddress}&apikey=${apikey}`;
+  const apicall = `${chainConfig.explorer_api}/v2/api?module=contract&action=getcontractcreation&contractaddresses=${contractAddress}&apikey=${apikey}&chainid=${chainConfig.id}`;
   const response = await fetch(apicall);
   const data = await response.json();
   if (data.status === "1") {

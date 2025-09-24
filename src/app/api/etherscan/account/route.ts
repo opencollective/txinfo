@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   const chain = searchParams.get("chain");
   const tokenAddress = searchParams.get("tokenAddress");
   const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
-  const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
+  const apikey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
 
   if (!apikey) {
     console.error("No API key found for", chainConfig.explorer_api);
@@ -24,6 +24,7 @@ export async function GET(req: Request) {
     startblock: "0",
     endblock: "99999999",
     sort: "desc",
+    chainid: chainConfig.id.toString(),
     apikey: apikey || "",
   });
 
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
     params.set("contractaddress", tokenAddress);
   }
 
-  const apicall = `${chainConfig.explorer_api}/api?${params.toString()}`;
+  const apicall = `${chainConfig.explorer_api}/v2/api?${params.toString()}`;
 
   const response = await fetch(apicall);
   const data = await response.json();

@@ -20,7 +20,7 @@
   "polygon": {
     "id": 137,
     "explorer_url": "https://polygonscan.com",
-    "explorer_api": "https://api.polygonscan.com",
+    "explorer_api": "https://api.etherscan.io",
     "explorer_name": "Polygonscan",
     "rpc": [
       "https://polygon.drpc.org",
@@ -42,7 +42,7 @@
       "decimals": 18
     },
     "explorer_url": "https://celoscan.io",
-    "explorer_api": "https://api.celoscan.io",
+    "explorer_api": "https://api.etherscan.io",
     "explorer_name": "CeloScan",
     "rpc": [
       "https://celo.drpc.org",
@@ -82,7 +82,7 @@
   "arbitrum": {
     "id": 42161,
     "explorer_url": "https://arbiscan.io",
-    "explorer_api": "https://api.arbiscan.io",
+    "explorer_api": "https://api.etherscan.io",
     "explorer_name": "Arbiscan",
     "rpc": [
       "https://arbitrum.drpc.org",
@@ -96,7 +96,7 @@
     "id": 8453,
     "explorer_url": "https://basescan.org",
     "explorer_name": "BaseScan",
-    "explorer_api": "https://api.basescan.org",
+    "explorer_api": "https://api.etherscan.io",
     "rpc": [
       "https://base.drpc.org",
       "https://base.llamarpc.com",
@@ -123,7 +123,7 @@
     "id": 100,
     "explorer_url": "https://gnosisscan.io",
     "explorer_name": "GnosisScan",
-    "explorer_api": "https://api.gnosisscan.io",
+    "explorer_api": "https://api.etherscan.io",
     "rpc": [
       "https://rpc.gnosischain.com",
       "https://1rpc.io/gnosis",

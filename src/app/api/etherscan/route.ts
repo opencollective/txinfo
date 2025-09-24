@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   }
 
   const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
-  const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
+  const apikey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
 
   if (!apikey) {
     console.error("No API key found for", chainConfig.explorer_api);
