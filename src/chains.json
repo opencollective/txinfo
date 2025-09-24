@@ -45,10 +45,10 @@
     "explorer_api": "https://api.celoscan.io",
     "explorer_name": "CeloScan",
     "rpc": [
-      "https://rpc.ankr.com/celo",
-      "https://1rpc.io/celo",
+      "https://celo.drpc.org",
       "https://forno.celo.org",
-      "https://celo.drpc.org"
+      "https://rpc.ankr.com/celo",
+      "https://1rpc.io/celo"
     ],
     "ws": [
       "wss://forno.celo.org/ws",
