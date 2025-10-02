@@ -179,7 +179,10 @@ export function useLiveTransactions({
       try {
         await processBlockRange();
       } catch (error) {
-        console.info(">>> error processing block range", error?.message);
+        console.info(
+          ">>> error processing block range",
+          error instanceof Error ? error.message : error
+        );
       }
       setInterval(processBlockRange, interval ?? 20000);
     },
