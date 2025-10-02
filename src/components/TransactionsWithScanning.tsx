@@ -309,6 +309,7 @@ export default function Transactions({ address, chain }: Props) {
             ? transactionsFilter.selectedTokens
             : availableTokens
         }
+        timeRangeLabel={transactionsFilter.dateRange.label}
         chainId={chainConfig.id}
       />
 
