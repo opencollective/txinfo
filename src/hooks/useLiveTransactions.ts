@@ -147,11 +147,11 @@ export function useLiveTransactions({
         if (lastBlock === blockNumber) {
           return;
         }
-        lastBlock = lastBlock ?? blockNumber - 1000;
+        lastBlock = lastBlock ?? blockNumber - 500;
 
         while (lastBlock < blockNumber) {
           processingBacklog = true;
-          const toBlock = Math.min(lastBlock + 1000, blockNumber);
+          const toBlock = Math.min(lastBlock + 500, blockNumber);
           console.log(
             ">>> useLiveTransactions getting logs for block range",
             lastBlock,
@@ -176,7 +176,11 @@ export function useLiveTransactions({
           );
         }
       };
-      processBlockRange();
+      try {
+        await processBlockRange();
+      } catch (error) {
+        console.info(">>> error processing block range", error?.message);
+      }
       setInterval(processBlockRange, interval ?? 20000);
     },
     [chainConfig, throttledProcessLog]

@@ -53,7 +53,7 @@ export default function Transactions({ address, chain }: Props) {
   );
   const provider = useRef<JsonRpcProvider>(new JsonRpcProvider(rpc[0]));
   const allTransactions = useRef<Transaction[]>([]);
-  const limit = 10000;
+  const limit = 500;
   let errorCount = 0;
 
   // Get unique token symbols from transactions
