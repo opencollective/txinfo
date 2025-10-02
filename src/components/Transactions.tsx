@@ -345,6 +345,7 @@ export default function Transactions({
           transactions={filteredTransactions}
           tokens={selectedTokens}
           timeRangeLabel={transactionsFilter.dateRange.label}
+          chainId={chainConfig.id}
         />
       )}
 
