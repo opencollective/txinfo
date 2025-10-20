@@ -57,7 +57,7 @@ export default function Transactions({ address, chain }: Props) {
     type: chainConfig.type
   }));
   const allTransactions = useRef<Transaction[]>([]);
-  const limit = 10000;
+  const limit = 500;
   let errorCount = 0;
 
   // Get unique token symbols from transactions
@@ -314,6 +314,7 @@ export default function Transactions({ address, chain }: Props) {
             : availableTokens
         }
         timeRangeLabel={transactionsFilter.dateRange.label}
+        chainId={chainConfig.id}
       />
 
       {/* Transactions List */}

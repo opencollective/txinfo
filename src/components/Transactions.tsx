@@ -68,6 +68,7 @@ function applyTxFilter(
   } else if (accountAddress && transactionsFilter.type === "out") {
     return tx.from === accountAddress.toLowerCase();
   }
+
   return true;
 }
 
@@ -81,6 +82,7 @@ export default function Transactions({
   const [txsPerPage, setTxsPerPage] = useState(LIMIT_PER_PAGE);
   const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
   const { subscribeToNotesByURI, notesByURI } = useNostr();
+  const [showIgnored, setShowIgnored] = useState(false);
   const [transactionsFilter, setTransactionsFilter] = useState<Filter>({
     dateRange: {
       start: null,
@@ -175,14 +177,61 @@ export default function Transactions({
     }
   }, [transactions, referenceAccount]);
 
-  // Filter transactions based on both date and tokens
+  // Helper function to check if a transaction is marked as ignored
+  const isTransactionIgnored = useMemo(
+    () =>
+      (tx: Transaction): boolean => {
+        const uri = generateURI("ethereum", {
+          chainId: chainConfig.id,
+          txHash: tx.txHash,
+        });
+        const notes = notesByURI[uri];
+        if (!notes || notes.length === 0) return false;
+
+        // Check if the latest note has a "t" tag with value "ignore"
+        const latestNote = notes[0];
+        return latestNote.tags.some(
+          (tag) => tag[0] === "t" && tag[1] === "ignore"
+        );
+      },
+    [chainConfig.id, notesByURI]
+  );
+
+  // Filter transactions based on date, tokens, and ignore status
   const filteredTransactions = useMemo(() => {
-    return transactions.length > 0
-      ? transactions.filter((tx) =>
-        applyTxFilter(tx, transactionsFilter, accountAddress)
-      )
-      : [];
-  }, [transactions, transactionsFilter, accountAddress]);
+    if (transactions.length === 0) return [];
+
+    return transactions.filter((tx) => {
+      // Apply existing filters
+      if (!applyTxFilter(tx, transactionsFilter, accountAddress)) {
+        return false;
+      }
+
+      // Apply ignore filter if showIgnored is false
+      if (!showIgnored && isTransactionIgnored(tx)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    transactions,
+    transactionsFilter,
+    accountAddress,
+    showIgnored,
+    isTransactionIgnored,
+  ]);
+
+  // Count ignored transactions
+  const ignoredCount = useMemo(() => {
+    return transactions.filter((tx) => {
+      // Only count transactions that pass other filters
+      return (
+        applyTxFilter(tx, transactionsFilter, accountAddress) &&
+        isTransactionIgnored(tx)
+      );
+    }).length;
+  }, [transactions, transactionsFilter, accountAddress, isTransactionIgnored]);
 
   const currentPageTxs = useMemo(
     () =>
@@ -297,14 +346,32 @@ export default function Transactions({
           transactions={filteredTransactions}
           tokens={selectedTokens}
           timeRangeLabel={transactionsFilter.dateRange.label}
+          chainId={chainConfig.id}
         />
       )}
 
       {skippedTransactions > 0 && (
         <div className="text-sm text-muted-foreground">
           {skippedTransactions} new transactions since{" "}
-          {formatTimestamp((transactions[0] as Transaction).timestamp)} (refresh
-          to load)
+          {formatTimestamp((transactions[0] as Transaction)?.timestamp)}{" "}
+          (refresh to load)
+        </div>
+      )}
+
+      {/* Ignored Transactions Toggle */}
+      {ignoredCount > 0 && (
+        <div className="text-sm text-muted-foreground flex items-center gap-2">
+          <span>
+            {ignoredCount} transaction{ignoredCount !== 1 ? "s" : ""} ignored
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-sm"
+            onClick={() => setShowIgnored(!showIgnored)}
+          >
+            {showIgnored ? "Hide ignored" : "Show all"}
+          </Button>
         </div>
       )}
 

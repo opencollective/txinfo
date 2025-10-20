@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
   const apikey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
 
   if (!apikey) {
