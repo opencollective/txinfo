@@ -1,15 +1,15 @@
 "use client";
 
-import type {
-  Address,
-  BlockchainTransaction,
-  Chain,
-  ChainConfig,
-  EtherscanTransfer,
-  LogEvent,
-  Token,
-  Transaction,
-  TxHash,
+import {
+  type Address,
+  type BlockchainTransaction,
+  type Chain,
+  type ChainConfig,
+  type EtherscanTransfer,
+  type LogEvent,
+  type Token,
+  type Transaction,
+  type TxHash,
 } from "@/types/index.d.ts";
 import { ethers, JsonRpcProvider, Log } from "ethers";
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +17,12 @@ import chains from "../chains.json";
 import ERC20_ABI from "../erc20.abi.json";
 import * as crypto from "./crypto.server";
 import { createProvider, TxBatchProvider } from "./rpcProvider";
+import { getTokenDetails } from "./crypto-ethereum";
 export const truncateAddress = crypto.truncateAddress;
+
+export const NativeToken: Token = {
+  address: "native"
+}
 
 const cache = {};
 const localStorage =
@@ -104,10 +109,12 @@ export function useTxDetails(chain: Chain, txId?: string) {
           setIsLoading(false);
           return;
         }
-        const token = await provider.current.getTokenDetails(
-          chain,
-          txReceipt.contract_address
-        );
+        const token = txReceipt.contract_address
+          ? await provider.current.getTokenDetails(
+              chain,
+              txReceipt.contract_address
+            )
+          : NativeToken;
         if (!token) {
           setError(new Error("Token not found"));
           setIsLoading(false);
@@ -207,7 +214,7 @@ export type TxReceipt = {
   blockNumber: number;
   timestamp: number;
   events: LogEvent[];
-  contract_address: string;
+  contract_address: Address;
 };
 
 /**
@@ -239,13 +246,19 @@ export async function processBlockRange(
   const txs = await provider.getBlockRange(chain, address, fromBlock, toBlock);
   if (txs.length > 0) {
     const newTxs = await Promise.all(
-      txs.map(async (tx: Transaction) => {
+      txs.map(async (tx) => {
         const timestamp = await getBlockTimestamp(
           chain,
           tx.blockNumber,
           provider
         );
-        const token = await provider.getTokenDetails(chain, tx.token.address);
+        const token =
+          tx.token.address === "native"
+            ? NativeToken
+            : await provider.getTokenDetails(chain, tx.token.address);
+        if (!token) {
+          throw new Error(`invalid token address ${tx.token.address}`);
+        }
         return {
           ...tx,
           timestamp,
@@ -330,7 +343,7 @@ export async function getBlockRange(
         blockNumber: log.blockNumber,
         txIndex: log.transactionIndex,
         logIndex: log.index,
-        txHash: log.transactionHash,
+        txId: log.transactionHash,
         token: {
           address: log.address,
         },
@@ -373,13 +386,20 @@ export async function getTxFromLog(
   const to = parsedLog?.args[1].toLowerCase() as Address;
   const value = parsedLog?.args[2].toString();
   const block = await provider.getBlock(log.blockNumber);
-  const token = await getTokenDetails(chain, log.address, provider);
+  const token = (await getTokenDetails(
+    chain,
+    log.address as Address,
+    provider
+  )) as Token;
+  if (!token) {
+    throw new Error(`invalid token ${log.address}`);
+  }
   const tx = {
     blockNumber: log.blockNumber,
     timestamp: block?.timestamp as number,
     txIndex: log.transactionIndex,
     logIndex: log.index,
-    txHash: log.transactionHash as TxHash,
+    txId: log.transactionHash as TxHash,
     token,
     from,
     to,
@@ -427,7 +447,7 @@ const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
   if (!Array.isArray(data)) return [];
   return data.map((tx: EtherscanTransfer) => ({
     blockNumber: Number(tx.blockNumber),
-    txHash: tx.hash,
+    txId: tx.hash,
     txIndex: Number(tx.transactionIndex),
     timestamp: Number(tx.timeStamp),
     from: tx.from,
@@ -531,7 +551,7 @@ export async function getTransactionsFromEtherscan(
   }
 }
 
-export function useTokenDetails(chain: string, contractAddress: string) {
+export function useTokenDetails(chain: Chain, contractAddress: Address) {
   const [token, setToken] = useState<Token | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

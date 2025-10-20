@@ -114,7 +114,7 @@ export function generateURI(
   model: ProviderType,
   params: { chainId?: number; txId?: string; address?: string }
 ): URI {
-  let parts: (string | number)[] = [model];
+  const parts: (string | number)[] = [model];
   switch (model) {
     case "ethereum":
       if (params.chainId) {

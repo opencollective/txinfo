@@ -9,7 +9,7 @@ import { Client } from "@stacks/blockchain-api-client";
 import { paths as stacksApiPaths } from "@stacks/blockchain-api-client/lib/generated/schema";
 import { Client as TokenClient } from "@hirosystems/token-metadata-api-client";
 import { paths as stacksTokenPaths } from "@hirosystems/token-metadata-api-client/lib/generated/schema";
-import { ethers, JsonRpcProvider } from "ethers";
+import { ethers } from "ethers";
 import ERC20_ABI from "../erc20.abi.json";
 import { TxReceipt } from "./crypto";
 import * as crypto from "./crypto.server";
@@ -47,10 +47,28 @@ const setItem = (key: string, value: string) => {
   }
 };
 
+export const getStacksHeight = async (
+  client: Client<stacksApiPaths, `${string}/${string}`>
+) => {
+  const block = await client
+    .GET("/extended/v1/block/", {
+      params: {
+        query: { limit: 1 },
+      },
+    })
+    .then((r) => r.data);
+
+  if (block && block.results.length > 0) {
+    return block.results[0].height;
+  } else {
+    return -1;
+  }
+};
+
 export const getBlockTimestamp = async (
   chain: string,
   blockNumber: number,
-  provider: JsonRpcProvider
+  client: Client<stacksApiPaths, `${string}/${string}`>
 ) => {
   const key = `${chain}:${blockNumber}`;
   const cached = localStorage.getItem(key);
@@ -58,12 +76,20 @@ export const getBlockTimestamp = async (
     return JSON.parse(cached);
   }
 
-  const block = await provider.getBlock(blockNumber);
+  const block = await client
+    .GET(`/extended/v1/block/by_height/{height}`, {
+      params: {
+        path: {
+          height: blockNumber,
+        },
+      },
+    })
+    .then((r) => r.data);
   if (!block) {
     throw new Error(`Block not found: ${blockNumber}`);
   }
-  setItem(key, block.timestamp.toString());
-  return block.timestamp;
+  setItem(key, block.block_time.toString());
+  return block.block_time;
 };
 
 export const isStacksAddress = (address: string): boolean => {
@@ -202,11 +228,16 @@ export async function getTxReceipt(
         return null;
       }
 
-      const event = tx.events.find(
+      console.log(tx.events);
+
+      const ft_event = tx.events.find(
         (e) => e.event_type === "fungible_token_asset"
       );
-      const contract_address = event?.asset.asset_id.split("::")[0];
-      if (!contract_address) {
+      const stx_event = tx.events.find((e) => e.event_type === "stx_asset");
+      const contract_address = ft_event
+        ? ft_event.asset.asset_id.split("::")[0]
+        : undefined;
+      if (ft_event && !contract_address) {
         console.error("Transaction does not have a token:", txId);
         return null;
       }
@@ -215,7 +246,11 @@ export async function getTxReceipt(
         hash: tx.tx_id,
         blockNumber,
         timestamp: tx.block_time,
-        contract_address: contract_address,
+        contract_address: ft_event
+          ? contract_address
+          : stx_event
+          ? undefined
+          : "no event",
         events: tx.events.map(eventToLogEvent),
       };
       console.log("getTxReceipt", res);
@@ -303,7 +338,7 @@ export async function getBlockRange(
   accountAddress: string,
   fromBlock: number,
   toBlock: number,
-  provider: JsonRpcProvider
+  provider: Client<stacksApiPaths, `${string}/${string}`>
 ): Promise<BlockchainTransaction[]> {
   const key =
     `${chain}:${accountAddress}[${fromBlock}-${toBlock}]`.toLowerCase();
@@ -334,48 +369,15 @@ export async function getBlockRange(
     ethers.zeroPadValue(accountAddress, 32),
   ];
 
+  // TODO
+  // eslint-disable-next-line prefer-const
   let hasError = false;
-  const logsFrom = await provider.getLogs({
-    fromBlock,
-    toBlock,
-    topics: topicsFrom,
-  });
-  const logsTo = await provider.getLogs({
-    fromBlock,
-    toBlock,
-    topics: topicsTo,
-  });
 
-  const logs = [...logsFrom, ...logsTo];
+  const res: BlockchainTransaction[] = [];
 
-  const res = logs.map((log) => {
-    try {
-      const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
-      const parsedLog = contract.interface.parseLog(log);
-      const from = parsedLog?.args[0].toLowerCase();
-      const to = parsedLog?.args[1].toLowerCase();
-      const value = parsedLog?.args[2].toString();
-      return {
-        blockNumber: log.blockNumber,
-        txIndex: log.transactionIndex,
-        logIndex: log.index,
-        txHash: log.transactionHash,
-        token: {
-          address: log.address,
-        },
-        from,
-        to,
-        value,
-      };
-    } catch (error) {
-      hasError = true;
-      console.log("error parsing log", log, error);
-      // e.g. https://gnosisscan.io/tx/0xf8162e7b3e5ed2691d1b7ba587108743230d7b98514d2f5c3a19899274b3cb8f (NFT spam)
-      return null;
-    }
-  });
   res.sort((a, b) => {
-    if (!a || !b) return 0;
+    if (!a || !b || !a.txIndex || !b.txIndex || !a.logIndex || !b.logIndex)
+      return 0;
     // First sort by block number
     if (a.blockNumber !== b.blockNumber) {
       return b.blockNumber - a.blockNumber;
@@ -407,7 +409,7 @@ export async function getBlockRangeForAddress(
   //   return JSON.parse(cached);
   // }
 
-  const transactions = await getTransactionsFromEtherscan(chain, address);
+  const transactions: BlockchainTransaction[] =[]; // TODO
   if (transactions) {
     const firstBlock = Number(transactions[0].blockNumber);
     const lastBlock =

@@ -23,7 +23,7 @@ export type URI =
 export type Token = {
   name?: string;
   symbol?: string;
-  address: Address;
+  address: Address | "native";
   decimals?: number;
 };
 

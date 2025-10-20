@@ -25,6 +25,10 @@ const FEATURED_ACCOUNTS = [
     name: "Vitalik.eth on Ethereum",
     path: "/ethereum/address/vitalik.eth",
   },
+  {
+    name:"Stacks Endowment (SIP-031)",
+    path: "stacks/address/SM1Z6BP8PDKYKXTZXXSKXFEY6NQ7RAM7DAEAYR045"
+  }
 ];
 
 export default function Home() {

@@ -28,7 +28,8 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-  const providerType = chains[chain as keyof typeof chains].type as ProviderType;
+  const providerType = chains[chain as keyof typeof chains]
+    .type as ProviderType;
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
     if (isEditing) {
@@ -54,7 +55,6 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (!address) return defaultProfile;
       if (!notesByURI[uri]) return defaultProfile;
 
-
       const profile = getProfileFromNote(notesByURI[uri][0]);
       if (!profile) return defaultProfile;
       return profile;
@@ -64,23 +64,19 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
   const isZeroAddress = (address: string): boolean => {
     switch (providerType) {
       case "ethereum":
-        return address === "0x0000000000000000000000000000000000000000"
+        return address === "0x0000000000000000000000000000000000000000";
       default:
         return false;
     }
-  }
+  };
 
   console.log(tx);
 
   const defaultFromProfile = getProfileForAddress(
-    isZeroAddress(tx.from)
-      ? tx.token.address
-      : tx.from
+    isZeroAddress(tx.from) ? (tx.token.address as Address) : tx.from
   );
   const defaultToProfile = getProfileForAddress(
-    isZeroAddress(tx.to)
-      ? tx.token.address
-      : tx.to
+    isZeroAddress(tx.to) ? (tx.token.address as Address) : tx.to
   );
 
   const [fromProfile, setFromProfile] =

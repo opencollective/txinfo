@@ -1,20 +1,19 @@
 import {
-  Avatar as AvatarUI,
   AvatarFallback,
   AvatarImage,
+  Avatar as AvatarUI,
 } from "@/components/ui/avatar";
 import {
+  cn,
   generateAvatar,
-  generateURI,
   getAddressFromURI,
   getChainIdFromURI,
-  getChainSlugFromChainId,
+  getChainSlugFromChainId
 } from "@/lib/utils";
-import { ProfileData } from "@/types";
-import { cn } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
-import { useRouter } from "next/navigation";
+import { ProfileData } from "@/types";
 import { ProviderType } from "@/utils/rpcProvider";
+import { useRouter } from "next/navigation";
 
 export default function Avatar({
   profile,

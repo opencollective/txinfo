@@ -181,9 +181,9 @@ export default function Transactions({
   const isTransactionIgnored = useMemo(
     () =>
       (tx: Transaction): boolean => {
-        const uri = generateURI("ethereum", {
+        const uri = generateURI(chainConfig.type, {
           chainId: chainConfig.id,
-          txHash: tx.txHash,
+          txId: tx.txId,
         });
         const notes = notesByURI[uri];
         if (!notes || notes.length === 0) return false;
@@ -292,20 +292,20 @@ export default function Transactions({
     currentPageTxs.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
       if (tx.token?.address) {
         uris.add(
-          generateURI("ethereum", {
+          generateURI(chainConfig.type, {
             chainId: chainConfig.id,
             address: tx.token?.address,
           })
         );
       }
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
+        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.from })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
+        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.to })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, txId: tx.txId })
+        generateURI(chainConfig.type, { chainId: chainConfig.id, txId: tx.txId })
       );
     });
     const urisArray = Array.from(uris) as URI[];

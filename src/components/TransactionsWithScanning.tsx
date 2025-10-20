@@ -1,21 +1,26 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
-import { JsonRpcProvider } from "ethers";
-import { processBlockRange, getBlockRangeForAddress } from "../utils/crypto";
-import chains from "../chains.json";
-import { Button } from "@/components/ui/button";
-import React from "react";
+import chains from "@/chains.json";
 import { TransactionRow } from "@/components/TransactionRow";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { X } from "lucide-react";
-import type { Address, Token, URI, Transaction, Chain, ChainConfig } from "@/types";
 import { cn, generateURI } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
-import StatsCards from "./StatsCards";
-import Filters, { type Filter } from "./Filters";
+import type {
+  Address,
+  Chain,
+  ChainConfig,
+  Token,
+  Transaction,
+  URI,
+} from "@/types";
 import { createProvider, TxBatchProvider } from "@/utils/rpcProvider";
+import { endOfMonth, format, isWithinInterval, startOfMonth } from "date-fns";
+import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getBlockRangeForAddress } from "../utils/crypto";
+import Filters, { type Filter } from "./Filters";
+import StatsCards from "./StatsCards";
 
 interface Props {
   address: Address;
@@ -25,6 +30,7 @@ interface Props {
 const LIMIT_PER_PAGE = 50;
 
 export default function Transactions({ address, chain }: Props) {
+  const chainConfig = chains[chain] as ChainConfig;
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [progress, setProgress] = useState<{
@@ -52,10 +58,12 @@ export default function Transactions({ address, chain }: Props) {
       typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
     [chainConfig]
   );
-  const provider = useRef<TxBatchProvider>(createProvider({
-    rpcUrl: rpc[0],
-    type: chainConfig.type
-  }));
+  const provider = useRef<TxBatchProvider>(
+    createProvider({
+      rpcUrl: rpc[0],
+      type: chainConfig.type,
+    })
+  );
   const allTransactions = useRef<Transaction[]>([]);
   const limit = 500;
   let errorCount = 0;
@@ -74,7 +82,8 @@ export default function Transactions({ address, chain }: Props) {
           tx.token?.address &&
           tx.token?.symbol &&
           tx.token?.symbol?.length > 0 &&
-          tx.token?.symbol?.length <= 6
+          tx.token?.symbol?.length <= 6 &&
+          tx.token.address !== "native"
         ) {
           tokenMap[tx.token.address] = tx.token;
         }
@@ -171,12 +180,13 @@ export default function Transactions({ address, chain }: Props) {
           //   toBlock
           // );
           try {
-            const newTxs: Transaction[] = await provider.current.processBlockRange(
-              chain,
-              address,
-              fromBlock,
-              toBlock,
-            );
+            const newTxs: Transaction[] =
+              await provider.current.processBlockRange(
+                chain,
+                address,
+                fromBlock,
+                toBlock
+              );
             // Update progress
             setProgress({
               fromBlock,
@@ -220,7 +230,7 @@ export default function Transactions({ address, chain }: Props) {
             );
             provider.current = createProvider({
               type: chainConfig.type,
-              rpcUrl: rpc[errorCount % rpc.length]
+              rpcUrl: rpc[errorCount % rpc.length],
             });
           }
         }
@@ -261,13 +271,13 @@ export default function Transactions({ address, chain }: Props) {
     const uris = new Set<URI>();
     filteredTransactions.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
+        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.from })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
+        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.to })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, txId: tx.txId })
+        generateURI(chainConfig.type, { chainId: chainConfig.id, txId: tx.txId })
       );
     });
 

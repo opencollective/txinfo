@@ -1,5 +1,13 @@
-import { HexString, Transaction, TxBatch, TxHash } from "@/types";
-import { Block, TransactionResponse } from "ethers";
+import {
+  BlockchainTransaction,
+  HexString,
+  LogEvent,
+  Transaction,
+  TxBatch,
+  TxHash,
+} from "@/types";
+import { Block, Log, TransactionResponse } from "ethers";
+import { getBlockTimestamp } from "./crypto";
 
 export function blockToTxBatch(block: Block | null): TxBatch | null {
   return block
@@ -30,5 +38,13 @@ export function txToTransaction(
     token: {
       address: "0x0123456789abcdef0123456789abcdef01234567" as HexString<42>,
     },
+  };
+}
+
+export function logToLogEvent(log: Log): LogEvent {
+  return {
+    address: log.address,
+    args: [], // TODO
+    name: "Transfer",
   };
 }

@@ -4,6 +4,7 @@ import { ethers, JsonRpcProvider, Log } from "ethers";
 import ERC20_ABI from "../erc20.abi.json";
 import * as crypto from "./crypto.server";
 import { setItem, TxReceipt } from "./crypto";
+import { Address, Token } from "@/types";
 export const truncateAddress = crypto.truncateAddress;
 
 export async function getTxReceipt(
@@ -86,7 +87,7 @@ export async function getTxReceipt(
       hash: tx.hash,
       blockNumber,
       timestamp,
-      contract_address: tx.to,
+      contract_address: tx.to as Address,
       events: [],
     };
   }
@@ -113,7 +114,7 @@ export const getBlockTimestamp = async (
 
 export async function getTokenDetails(
   chain: string,
-  contractAddress: string,
+  contractAddress: Address,
   provider: JsonRpcProvider
 ) {
   try {
@@ -139,7 +140,7 @@ export async function getTokenDetails(
       contract.decimals(),
     ]);
 
-    const tokenDetails = {
+    const tokenDetails: Token = {
       name,
       symbol,
       decimals: Number(decimals),

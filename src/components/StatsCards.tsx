@@ -1,20 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Coins,
-  ListChecks,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Sigma,
-  GitBranch,
-} from "lucide-react";
-import { cn, formatTimestamp } from "@/lib/utils";
-import { ethers } from "ethers";
-import { truncateAddress } from "@/utils/crypto";
-import { useMemo, useState } from "react";
-import { formatNumber } from "@/lib/utils";
-import type { Transaction, Token, Address } from "@/types";
 import FlowChart from "@/components/FlowChart";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn, formatNumber, formatTimestamp } from "@/lib/utils";
+import type { Address, Token, Transaction } from "@/types";
+import { truncateAddress } from "@/utils/crypto";
+import { ethers } from "ethers";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Coins,
+  GitBranch,
+  ListChecks,
+  Sigma,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 
 export default function StatsCards({
   transactions,

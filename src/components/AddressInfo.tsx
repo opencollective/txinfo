@@ -9,9 +9,8 @@ import CopyableValue from "./CopyableValue";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import { generateURI, getProfileFromNote } from "@/lib/utils";
-import type { Address, URI } from "@/types";
+import type { Address, ChainConfig, URI } from "@/types";
 import { getENSDetailsFromAddress } from "@/utils/crypto.server";
-import { ProviderType } from "@/utils/rpcProvider";
 import Avatar from "./Avatar";
 import TagsList from "./TagsList";
 import TagValue from "./TagValue";
@@ -27,8 +26,8 @@ export default function AddressInfo({
   ensName?: string;
   addressType?: "address" | "token" | "eoa" | "contract";
 }) {
-  const chainConfig = chains[chain as keyof typeof chains];
-  const providerType = chainConfig.type as ProviderType;
+  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const providerType = chainConfig.type;
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();

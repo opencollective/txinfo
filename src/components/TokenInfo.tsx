@@ -4,12 +4,13 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import chains from "../chains.json";
 import { ExternalLink } from "lucide-react";
 import { useTokenDetails } from "@/utils/crypto";
+import { Address, Chain } from "@/types";
 export default function TokenDetails({
   chain,
   address,
 }: {
-  chain: string;
-  address: string;
+  chain: Chain;
+  address: Address;
 }) {
   const chainConfig = chains[chain as keyof typeof chains];
 
@@ -32,7 +33,9 @@ export default function TokenDetails({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>{token.name}</span>
+          <span>
+            {token.address === "native" ? "Native Token" : token.name}
+          </span>
           <a
             href={`${chainConfig?.explorer_url}/token/${address}`}
             target="_blank"

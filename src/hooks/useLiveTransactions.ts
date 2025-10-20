@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { JsonRpcProvider, WebSocketProvider, Log, ethers } from "ethers";
 import chains from "@/chains.json";
 import { Address, BlockchainTransaction, ChainConfig } from "@/types";
-import { getTxFromLog } from "@/utils/crypto";
 import { createProvider } from "@/utils/rpcProvider";
+import { Log, WebSocketProvider, ethers } from "ethers";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 
@@ -82,7 +81,7 @@ export function useLiveTransactions({
 
   const processLog = useCallback(
     async (log: Log) => {
-      const tx = await getTxFromLog(chain, log, httpProvider);
+      const tx = await httpProvider.getTxFromLog(chain, log);
       setTransactions((prev) => [tx, ...prev].slice(0, 50));
     },
     [httpProvider, chain]

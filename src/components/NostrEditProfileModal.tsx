@@ -12,11 +12,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Loader2, User } from "lucide-react";
 import Link from "next/link";
-import { Address, ProfileData, URI } from "@/types";
+import { Address, ChainConfig, ProfileData, URI } from "@/types";
 import { generateURI, getAddressFromURI, getChainIdFromURI } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
 import { useState } from "react";
 import chains from "@/chains.json";
+import { ProviderType } from "@/utils/rpcProvider";
 
 export default function NostrEditProfileModal({
   uri,
@@ -30,14 +31,14 @@ export default function NostrEditProfileModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const chainId = getChainIdFromURI(uri);
-  let chain;
+  let chain: keyof typeof chains | undefined = undefined;
   Object.entries(chains).forEach(([chainSlug, c]) => {
     if (c.id === chainId) {
-      chain = chainSlug;
+      chain = chainSlug as keyof typeof chains;
     }
   });
-  const address = getAddressFromURI(uri);
 
+  const address = getAddressFromURI(uri);
   const { publishMetadata, notesByURI, profiles } = useNostr();
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>(
@@ -51,6 +52,11 @@ export default function NostrEditProfileModal({
     }
   );
 
+  if (!chain) {
+    return <>Unsupported chain</>;
+  }
+  const chainConfig = chains[chain] as ChainConfig;
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!address) return;
@@ -58,7 +64,7 @@ export default function NostrEditProfileModal({
     setIsSubmittingProfile(true);
 
     try {
-      const uri = generateURI("ethereum", { chainId, address });
+      const uri = generateURI(chainConfig.type, { chainId, address });
       const previousNote = notesByURI[uri] ? notesByURI[uri][0] : null;
 
       const tags = [
