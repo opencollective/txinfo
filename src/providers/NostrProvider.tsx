@@ -237,7 +237,7 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
       ];
 
       if (!poolRef.current) {
-        console.error(">>> NostrProvider: pool not connected");
+        console.error(">>> NostrProvider: pool not connected - subscribeToProfiles");
         return;
       }
 
@@ -279,10 +279,22 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
     return parseInt(lastTwoChars, 16) % 10;
   };
 
+  const waitForConnection = async () => {
+      let count = 0;
+      while (!poolRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        count++;
+        if (count > 10) {
+          return;
+        }
+      }
+    
+  }
+
   const createNewSubscription = useCallback(
     (uris: URI[], groupIndex: number) => {
       if (!poolRef.current) {
-        console.error(">>> NostrProvider: pool not connected");
+        console.info(">>> NostrProvider: pool not connected, trying again - createNewSubscription");
         return;
       }
       if (connectedRelaysRef.current.length === 0) {
@@ -318,13 +330,13 @@ export function NostrProvider({ children }: { children: React.ReactNode }) {
         }
       ) as RelaySubscription;
     },
-    [poolRef, addNostrEventsToState]
+    [poolRef,  addNostrEventsToState]
   );
 
   const subscribeToLatestNotes = useCallback(
     ({ kinds, limit }: { kinds: BlockchainKind[]; limit?: number }) => {
       if (!poolRef.current) {
-        console.error(">>> NostrProvider: pool not connected");
+        console.error(">>> NostrProvider: pool not connected - subscribeToLatestNotes");
         return;
       }
       const filter = {

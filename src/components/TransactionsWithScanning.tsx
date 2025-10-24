@@ -14,7 +14,7 @@ import type {
   Transaction,
   URI,
 } from "@/types";
-import { createProvider, TxBatchProvider } from "@/utils/rpcProvider";
+import { createProvider, BlockchainDataProvider } from "@/utils/rpcProvider";
 import { endOfMonth, format, isWithinInterval, startOfMonth } from "date-fns";
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -58,7 +58,7 @@ export default function Transactions({ address, chain }: Props) {
       typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
     [chainConfig]
   );
-  const provider = useRef<TxBatchProvider>(
+  const provider = useRef<BlockchainDataProvider>(
     createProvider({
       rpcUrl: rpc[0],
       type: chainConfig.type,

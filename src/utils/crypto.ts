@@ -16,8 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import chains from "../chains.json";
 import ERC20_ABI from "../erc20.abi.json";
 import * as crypto from "./crypto.server";
-import { createProvider, TxBatchProvider } from "./rpcProvider";
-import { getTokenDetails } from "./crypto-ethereum";
+import { createProvider, BlockchainDataProvider } from "./rpcProvider";
 export const truncateAddress = crypto.truncateAddress;
 
 export const NativeToken: Token = {
@@ -57,7 +56,7 @@ export const setItem = (key: string, value: string) => {
 export const getBlockTimestamp = async (
   chain: Chain,
   blockNumber: number,
-  provider: TxBatchProvider
+  provider: BlockchainDataProvider
 ) => {
   const key = `${String(chain)}:${blockNumber}`;
   const cached = localStorage.getItem(key);
@@ -230,7 +229,7 @@ export async function processBlockRange(
   address: Address,
   fromBlock: number,
   toBlock: number,
-  provider: TxBatchProvider
+  provider: BlockchainDataProvider
 ): Promise<Transaction[]> {
   const key = `${String(
     chain
@@ -375,38 +374,6 @@ export async function getBlockRange(
   return res.filter((tx) => tx !== null) as BlockchainTransaction[];
 }
 
-export async function getTxFromLog(
-  chain: string,
-  log: Log,
-  provider: JsonRpcProvider
-): Promise<BlockchainTransaction> {
-  const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
-  const parsedLog = contract.interface.parseLog(log);
-  const from = parsedLog?.args[0].toLowerCase() as Address;
-  const to = parsedLog?.args[1].toLowerCase() as Address;
-  const value = parsedLog?.args[2].toString();
-  const block = await provider.getBlock(log.blockNumber);
-  const token = (await getTokenDetails(
-    chain,
-    log.address as Address,
-    provider
-  )) as Token;
-  if (!token) {
-    throw new Error(`invalid token ${log.address}`);
-  }
-  const tx = {
-    blockNumber: log.blockNumber,
-    timestamp: block?.timestamp as number,
-    txIndex: log.transactionIndex,
-    logIndex: log.index,
-    txId: log.transactionHash as TxHash,
-    token,
-    from,
-    to,
-    value,
-  };
-  return tx;
-}
 
 /**
  * Get the first and last block for an address

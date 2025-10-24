@@ -1,3 +1,4 @@
+import { EthereumDataProvider } from "@/providers-blockchains/ethereum";
 import {
   Address,
   BlockchainTransaction,
@@ -7,14 +8,11 @@ import {
   Transaction,
   TxBatch,
 } from "@/types";
-import { getTxFromLog } from "@/utils/crypto";
 import { createClient as createTokenClient } from "@hirosystems/token-metadata-api-client";
 import { createClient } from "@stacks/blockchain-api-client";
-import { JsonRpcProvider, Log } from "ethers";
+import { Log } from "ethers";
 import { TxReceipt } from "./crypto";
-import * as Ethereum from "./crypto-ethereum";
-import * as Stacks from "./crypto-stacks";
-import * as EthereumHelpers from "./helpers-ether";
+import { StacksDataProvider } from "@/providers-blockchains/stacks";
 export type ProviderType = "ethereum" | "stacks" | "bitcoin";
 
 export interface ProviderConfig {
@@ -23,8 +21,13 @@ export interface ProviderConfig {
   network?: string;
 }
 
-export interface TxBatchProvider {
-  processBlockRange(chain: string, address: Address, fromBlock: number, toBlock: number): Transaction[] | PromiseLike<Transaction[]>;
+export interface BlockchainDataProvider {
+  processBlockRange(
+    chain: string,
+    address: Address,
+    fromBlock: number,
+    toBlock: number
+  ): Transaction[] | PromiseLike<Transaction[]>;
   // TODO use LogEvent instead of Log
   getTxFromLog(chain: string, log: Log): Promise<BlockchainTransaction>;
   getBlockNumber(): Promise<number>;
@@ -45,71 +48,12 @@ export interface TxBatchProvider {
   ): Promise<BlockchainTransaction[]>;
 }
 
-export function createProvider(config: ProviderConfig): TxBatchProvider {
+export function createProvider(config: ProviderConfig): BlockchainDataProvider {
   if (config.type === "ethereum") {
-    const provider = new JsonRpcProvider(config.rpcUrl);
-    return {
-      getTxFromLog: (chain, log) => {
-        return getTxFromLog(chain, log, provider);
-      },
-      getLogs: (filter) =>
-        provider
-          .getLogs(filter)
-          .then((logs) =>
-            logs.map((log) => EthereumHelpers.logToLogEvent(log))
-          ),
-      getTxBatch: (blockNumber) =>
-        provider.getBlock(blockNumber).then(EthereumHelpers.blockToTxBatch),
-      getTransaction: (txId) =>
-        provider.getTransaction(txId).then(EthereumHelpers.txToTransaction),
-      getTxReceipt: (chain, txId) =>
-        Ethereum.getTxReceipt(chain, txId, provider),
-      getTokenDetails: async (chain, tokenAddress) =>
-        Ethereum.getTokenDetails(chain, tokenAddress, provider),
-      getBlockRange: async (
-        chain: Chain,
-        address: Address,
-        startBlock: number,
-        endBlock: number
-      ) => [],
-      getBlockNumber: () => provider.getBlockNumber(),
-    };
+    return new EthereumDataProvider(config.rpcUrl);
   }
   if (config.type === "stacks") {
-    const client = createClient({
-      baseUrl: config.rpcUrl,
-    });
-
-    const tokenClient = createTokenClient({
-      baseUrl: config.rpcUrl,
-    });
-    return {
-      getTxBatch: async (blockHeight: number) =>
-        Stacks.getTxBatch(blockHeight, client),
-      getTransaction: async (txId: string) => {
-        const res = await fetch(`${config.rpcUrl}/extended/v1/tx/${txId}`);
-        return res.json();
-      },
-      getTxReceipt: async (chain: Chain, txId: string) =>
-        Stacks.getTxReceipt(chain, txId, client),
-      getTokenDetails: async (chain: Chain, tokenContractAddress: string) =>
-        Stacks.getTokenDetails(
-          chain,
-          tokenContractAddress as `${string}.${string}`,
-          tokenClient
-        ),
-      getBlockRange: async (
-        chain: Chain,
-        address: Address,
-        startBlock: number,
-        endBlock: number
-      ) => [],
-      getBlockNumber: async () => Stacks.getStacksHeight(client),
-      getTxFromLog: (chain, log) => {
-        return Promise.reject("Not supported");
-      },
-      getLogs: async (filter) => [],
-    };
+    return new StacksDataProvider(config.rpcUrl);
   }
   throw new Error("Unsupported provider type");
 }
