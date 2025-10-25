@@ -1,16 +1,16 @@
 import chains from "@/chains.json";
 import AddressInfo from "@/components/AddressInfo";
 import Transactions from "@/components/Transactions";
-import type { Address, ChainConfig } from "@/types";
+import type { Address, Chain, ChainConfig } from "@/types";
 import { getAddressFromENSName } from "@/utils/crypto.server";
 import { c32addressDecode } from "c32check";
 import { isAddress } from "ethers";
 
 const isValidAddress = (chainConfig: ChainConfig, address: Address) => {
   if (!address) return false;
-  if (chainConfig.type === "ethereum") {
+  if (chainConfig.namespace === "eip155") {
     return isAddress(address);
-  } else if (chainConfig.type === "stacks") {
+  } else if (chainConfig.namespace === "stacks") {
     try {
       return c32addressDecode(address.toUpperCase()) !== null;
     } catch (error) {
@@ -23,10 +23,10 @@ const isValidAddress = (chainConfig: ChainConfig, address: Address) => {
 export default async function Page({
   params,
 }: {
-  params: Promise<{ chain: string; address: string }>;
+  params: Promise<{ chain: Chain; address: string }>;
 }) {
   const { chain, address } = await params;
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
 
   if (!address) {
     return <div>Invalid address</div>;

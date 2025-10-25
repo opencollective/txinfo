@@ -1,6 +1,6 @@
 import React from "react";
 import { cn, isUrl } from "@/lib/utils";
-import { Image } from "lucide-react";
+import Image from "next/image";
 
 interface TagProps extends React.HTMLAttributes<HTMLSpanElement> {
   value: string;
@@ -63,10 +63,10 @@ function ComboTag({
   if (kind === "picture") {
     tagValue = (
       <div className="group/picture inline-block overflow-visible">
-        <Image className="w-4 h-4" />
+        <Image className="w-4 h-4" alt="" src=""/>
         {/* Thumbnail preview on hover */}
         <div className="absolute hidden group-hover/picture:block z-50 top-[30px] left-0 p-1 bg-white dark:bg-gray-800 rounded shadow-lg">
-          <img
+          <Image
             src={value}
             alt="Thumbnail"
             className="max-w-[200px] max-h-[200px] object-contain"

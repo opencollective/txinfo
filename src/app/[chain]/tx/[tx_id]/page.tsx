@@ -2,20 +2,18 @@ import TxDetails from "@/components/TxDetails";
 import History from "@/components/History";
 import chains from "@/chains.json";
 import { generateURI } from "@/lib/utils";
-import { ChainConfig } from "@/types";
+import { Chain, ChainConfig } from "@/types";
 export default async function Page({
   params,
 }: {
-  params: Promise<{ chain: string; tx_id: string }>;
+  params: Promise<{ chain: Chain; tx_id: string }>;
 }) {
   const { chain, tx_id } = await params;
-  console.log("chain", chain, "tx_id", tx_id);
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
-  const uri = generateURI(chainConfig.type, {
+  const chainConfig = chains[chain];
+  const uri = generateURI(chainConfig.namespace, {
     chainId: chainConfig.id,
     txId: tx_id,
   });
-  console.log("uri", uri);
   if (!uri) {
     return <div>Invalid URI</div>;
   }

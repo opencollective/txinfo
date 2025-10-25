@@ -1,4 +1,5 @@
 import { EthereumDataProvider } from "@/providers-blockchains/ethereum";
+import { StacksDataProvider } from "@/providers-blockchains/stacks";
 import {
   Address,
   BlockchainTransaction,
@@ -8,28 +9,17 @@ import {
   Transaction,
   TxBatch,
 } from "@/types";
-import { createClient as createTokenClient } from "@hirosystems/token-metadata-api-client";
-import { createClient } from "@stacks/blockchain-api-client";
 import { Log } from "ethers";
 import { TxReceipt } from "./crypto";
-import { StacksDataProvider } from "@/providers-blockchains/stacks";
-export type ProviderType = "ethereum" | "stacks" | "bitcoin";
+export type ChainNamespace = "eip155" | "stacks" | "bip122";
 
 export interface ProviderConfig {
-  type: ProviderType;
+  namespace: ChainNamespace;
   rpcUrl: string;
   network?: string;
 }
 
 export interface BlockchainDataProvider {
-  processBlockRange(
-    chain: string,
-    address: Address,
-    fromBlock: number,
-    toBlock: number
-  ): Transaction[] | PromiseLike<Transaction[]>;
-  // TODO use LogEvent instead of Log
-  getTxFromLog(chain: string, log: Log): Promise<BlockchainTransaction>;
   getBlockNumber(): Promise<number>;
   getLogs(filter: {
     fromBlock: number | undefined;
@@ -49,10 +39,10 @@ export interface BlockchainDataProvider {
 }
 
 export function createProvider(config: ProviderConfig): BlockchainDataProvider {
-  if (config.type === "ethereum") {
+  if (config.namespace === "eip155") {
     return new EthereumDataProvider(config.rpcUrl);
   }
-  if (config.type === "stacks") {
+  if (config.namespace === "stacks") {
     return new StacksDataProvider(config.rpcUrl);
   }
   throw new Error("Unsupported provider type");

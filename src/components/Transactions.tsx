@@ -1,32 +1,31 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import { getTransactionsFromEtherscan } from "../utils/crypto";
-import chains from "../chains.json";
-import { Button } from "@/components/ui/button";
-import React from "react";
+import chains from "@/chains.json";
 import { TransactionRow } from "@/components/TransactionRow";
-import { isWithinInterval } from "date-fns";
-import { Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useLiveTransactions } from "@/hooks/useLiveTransactions";
+import { formatTimestamp, generateURI } from "@/lib/utils";
+import { useNostr } from "@/providers/NostrProvider";
 import type {
   Address,
-  TokenStats,
-  URI,
-  Transaction,
   BlockchainTransaction,
-  ChainConfig,
+  Chain,
+  TokenStats,
+  Transaction,
+  URI
 } from "@/types";
-import { useNostr } from "@/providers/NostrProvider";
-import StatsCards from "./StatsCards";
-import Filters, { type Filter } from "./Filters";
-import { useLiveTransactions } from "@/hooks/useLiveTransactions";
-import { formatTimestamp, generateURI, getProfileFromNote } from "@/lib/utils";
+import { isWithinInterval } from "date-fns";
 import { ethers } from "ethers";
-import Pagination from "./Pagination";
+import { Loader2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getTransactionsFromEtherscan } from "../utils/crypto";
 import ExportCSVButton from "./ExportCSVButton";
+import Filters, { type Filter } from "./Filters";
+import Pagination from "./Pagination";
+import StatsCards from "./StatsCards";
 
 interface Props {
-  chain: string;
+  chain: Chain;
   tokenAddress?: Address;
   accountAddress?: Address;
 }
@@ -112,7 +111,7 @@ export default function Transactions({
     notesByURIRef.current = notesByURI;
   }, [notesByURI]);
 
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
   const referenceAccount = accountAddress
     ? accountAddress
     : "0x0000000000000000000000000000000000000000";
@@ -181,7 +180,7 @@ export default function Transactions({
   const isTransactionIgnored = useMemo(
     () =>
       (tx: Transaction): boolean => {
-        const uri = generateURI(chainConfig.type, {
+        const uri = generateURI(chainConfig.namespace, {
           chainId: chainConfig.id,
           txId: tx.txId,
         });
@@ -194,7 +193,7 @@ export default function Transactions({
           (tag) => tag[0] === "t" && tag[1] === "ignore"
         );
       },
-    [chainConfig.id, notesByURI]
+    [chainConfig.id, chainConfig.namespace, notesByURI]
   );
 
   // Filter transactions based on date, tokens, and ignore status
@@ -292,20 +291,20 @@ export default function Transactions({
     currentPageTxs.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
       if (tx.token?.address) {
         uris.add(
-          generateURI(chainConfig.type, {
+          generateURI(chainConfig.namespace, {
             chainId: chainConfig.id,
             address: tx.token?.address,
           })
         );
       }
       uris.add(
-        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.from })
+        generateURI(chainConfig.namespace, { chainId: chainConfig.id, address: tx.from })
       );
       uris.add(
-        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.to })
+        generateURI(chainConfig.namespace, { chainId: chainConfig.id, address: tx.to })
       );
       uris.add(
-        generateURI(chainConfig.type, { chainId: chainConfig.id, txId: tx.txId })
+        generateURI(chainConfig.namespace, { chainId: chainConfig.id, txId: tx.txId })
       );
     });
     const urisArray = Array.from(uris) as URI[];
@@ -337,6 +336,7 @@ export default function Transactions({
         transactions={transactions}
         accountAddress={accountAddress as Address}
         onChange={setTransactionsFilter}
+        chain={chain}
       />
 
       {/* Stats Cards */}
@@ -346,7 +346,7 @@ export default function Transactions({
           transactions={filteredTransactions}
           tokens={selectedTokens}
           timeRangeLabel={transactionsFilter.dateRange.label}
-          chainId={chainConfig.id}
+          chain={chain }
         />
       )}
 
@@ -382,7 +382,6 @@ export default function Transactions({
             key={`${tx.txId}-${idx}`}
             tx={tx}
             chain={chain}
-            chainId={chainConfig.id}
           />
         );
       })}

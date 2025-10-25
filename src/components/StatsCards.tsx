@@ -1,8 +1,9 @@
+import chains from "@/chains.json";
 import FlowChart from "@/components/FlowChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatNumber, formatTimestamp } from "@/lib/utils";
-import type { Address, Token, Transaction } from "@/types";
+import type { Address, Chain, ChainConfig, Token, Transaction } from "@/types";
 import { truncateAddress } from "@/utils/crypto";
 import { ethers } from "ethers";
 import {
@@ -20,15 +21,17 @@ export default function StatsCards({
   accountAddress = "0x0000000000000000000000000000000000000000" as Address,
   timeRangeLabel,
   tokens,
-  chainId,
+  chain,
 }: {
   transactions: Transaction[];
   accountAddress: Address;
   timeRangeLabel: string;
   tokens: Token[];
-  chainId: number;
+  chain: Chain;
 }) {
-  const [viewMode, setViewMode] = useState<"sankey" | "list">("sankey");
+  const [viewMode, setViewMode] = useState<"sankey" | "list">("sankey");  
+  const chainConfig = chains[chain];
+  
   const stats = useMemo(() => {
     const received = transactions
       .filter((tx) => tx.to.toLowerCase() === accountAddress.toLowerCase())
@@ -224,7 +227,9 @@ export default function StatsCards({
                     stats.token.symbol
                   )}
                   <div title={stats.token.address}>
-                    {truncateAddress(stats.token.address)}
+                    {stats.token.address === "native"
+                            ? chainConfig.native_token?.symbol || "native"
+                            : truncateAddress(stats.token.address)}
                   </div>
                 </CardTitle>
                 <Coins className="h-4 w-4 text-muted-foreground" />
@@ -270,7 +275,7 @@ export default function StatsCards({
             <FlowChart
               transactions={transactions}
               accountAddress={accountAddress}
-              chainId={chainId}
+              chain={chain}
               tokens={tokens}
               viewMode={viewMode}
             />

@@ -1,35 +1,31 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ethers } from "ethers";
-import Link from "next/link";
-import { Edit } from "lucide-react";
+import chains from "@/chains.json";
 import Avatar from "@/components/Avatar";
-import { Separator } from "@/components/ui/separator";
-import NotesList from "@/components/NotesList";
-import { useNostr } from "@/providers/NostrProvider";
-import type { Transaction, Address, ProfileData, Chain } from "@/types";
 import EditMetadataForm from "@/components/EditMetadataForm";
-import TagsList from "./TagsList";
+import { Separator } from "@/components/ui/separator";
 import {
   formatNumber,
   formatTimestamp,
   generateURI,
   getProfileFromNote,
 } from "@/lib/utils";
+import { useNostr } from "@/providers/NostrProvider";
+import type { Address, Chain, ProfileData, Transaction } from "@/types";
 import { getENSDetailsFromAddress } from "@/utils/crypto.server";
-import { ProviderType } from "@/utils/rpcProvider";
-import chains from "@/chains.json";
+import { ethers } from "ethers";
+import { Edit } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import TagsList from "./TagsList";
 interface TransactionRowProps {
   tx: Transaction;
   chain: Chain;
-  chainId: number;
 }
 
-export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
+export function TransactionRow({ tx, chain }: TransactionRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-  const providerType = chains[chain as keyof typeof chains]
-    .type as ProviderType;
+  const {id: chainId, namespace: chainNamespace} = chains[chain];
   // Initialize edit values when notes change or edit mode is activated
   useEffect(() => {
     if (isEditing) {
@@ -41,7 +37,7 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
 
   const getProfileForAddress = useCallback(
     (address: Address): ProfileData => {
-      const uri = generateURI(providerType, { chainId, address });
+      const uri = generateURI(chainNamespace, { chainId, address });
       subscribeToNotesByURI([uri]);
 
       const defaultProfile = {
@@ -59,11 +55,11 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (!profile) return defaultProfile;
       return profile;
     },
-    [chainId, notesByURI, subscribeToNotesByURI, providerType]
+    [chainId, notesByURI, subscribeToNotesByURI, chainNamespace]
   );
   const isZeroAddress = (address: string): boolean => {
-    switch (providerType) {
-      case "ethereum":
+    switch (chainNamespace) {
+      case "eip155":
         return address === "0x0000000000000000000000000000000000000000";
       default:
         return false;
@@ -103,8 +99,8 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (profile.name) {
         setFromProfile(profile);
       } else {
-        switch (providerType) {
-          case "ethereum":
+        switch (chainNamespace) {
+          case "eip155":
             fetchENSDetails(tx.to);
             break;
           default:
@@ -112,7 +108,14 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
         }
       }
     }
-  }, [tx.from, fromProfile.name, fromProfile.uri, getProfileForAddress]);
+  }, [
+    tx.from,
+    fromProfile.name,
+    fromProfile.uri,
+    getProfileForAddress,
+    tx.to,
+    chainNamespace,
+  ]);
 
   useEffect(() => {
     const fetchENSDetails = async (address: Address) => {
@@ -134,8 +137,8 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
       if (profile.name) {
         setToProfile(profile);
       } else {
-        switch (providerType) {
-          case "ethereum":
+        switch (chainNamespace) {
+          case "eip155":
             fetchENSDetails(tx.to);
             break;
           default:
@@ -143,14 +146,14 @@ export function TransactionRow({ tx, chain, chainId }: TransactionRowProps) {
         }
       }
     }
-  }, [tx.to, toProfile.name, toProfile.uri, getProfileForAddress]);
+  }, [tx.to, toProfile.name, toProfile.uri, getProfileForAddress, chainNamespace]);
 
   if (!tx) {
     console.error("TransactionRow: tx is undefined");
     return null;
   }
 
-  const uri = generateURI(providerType, { chainId, txId: tx.txId });
+  const uri = generateURI(chainNamespace, { chainId, txId: tx.txId });
   subscribeToNotesByURI([uri]);
   const lastNote = notesByURI[uri] && notesByURI[uri][0];
 

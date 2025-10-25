@@ -1,10 +1,10 @@
+import chains from "@/chains.json";
 import type {
   Address,
-  ChainConfig,
-  EtherscanTransfer,
+  Chain,
+  EtherscanTransfer
 } from "@/types/index.d.ts";
 import { JsonRpcProvider } from "ethers";
-import chains from "../chains.json";
 
 export function truncateAddress(address: Address) {
   if (!address) return "";
@@ -149,12 +149,12 @@ setInterval(() => {
 }, 1000 * 60); // empty cache every minute
 
 export async function getTransactions(
-  chain: string,
+  chain: Chain,
   contractaddress: string | null,
   address?: string | null,
   type: "token" | "native" = "token"
 ): Promise<EtherscanTransfer[]> {
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
   const apikey = process.env[`${chain?.toUpperCase()}_ETHERSCAN_API_KEY`];
   if (!apikey) {
     console.error("No API key found for", chainConfig.explorer_api);
@@ -201,6 +201,7 @@ export async function getTransactions(
     const nativeToken =
       chainConfig.native_token || chains["ethereum"].native_token;
     const res = (data.result as EtherscanTransfer[]) || [];
+
     if (type !== "native") {
       const nativeTxs = await getTransactions(
         chain,
@@ -208,7 +209,7 @@ export async function getTransactions(
         address,
         "native"
       );
-      if (Array.isArray(nativeTxs) && nativeTxs.length > 0) {
+      if (Array.isArray(nativeTxs) && nativeTxs.length > 0 && nativeToken) {
         res.push(
           ...nativeTxs.map((tx) => {
             return {

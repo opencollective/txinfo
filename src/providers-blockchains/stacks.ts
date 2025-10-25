@@ -1,22 +1,27 @@
+"use client";
+
 import {
-  Address,
-  Transaction,
-  BlockchainTransaction,
-  LogEvent,
-  TxBatch,
-  Chain,
-  Token,
-  TxHash,
+    Address,
+    BlockchainTransaction,
+    Chain,
+    LogEvent,
+    Token,
+    Transaction,
+    TxBatch,
+    TxHash,
 } from "@/types";
 import { setItem, TxReceipt } from "@/utils/crypto";
 import { BlockchainDataProvider } from "@/utils/rpcProvider";
-import { Client, createClient, OperationResponse } from "@stacks/blockchain-api-client";
-import { paths as stacksApiPaths } from "@stacks/blockchain-api-client/lib/generated/schema";
-import { Log } from "ethers";
-import { createClient as createTokenClient } from "@hirosystems/token-metadata-api-client";
-import { Client as TokenClient } from "@hirosystems/token-metadata-api-client";
+import { createClient as createTokenClient, Client as TokenClient } from "@hirosystems/token-metadata-api-client";
 import { paths as stacksTokenPaths } from "@hirosystems/token-metadata-api-client/lib/generated/schema";
-import * as Stacks from "@/utils/crypto-stacks";
+import {
+    Client,
+    createClient,
+    OperationResponse,
+} from "@stacks/blockchain-api-client";
+import { paths as stacksApiPaths } from "@stacks/blockchain-api-client/lib/generated/schema";
+import { c32addressDecode } from "c32check";
+import { Log } from "ethers";
 
 export class StacksDataProvider implements BlockchainDataProvider {
   client: Client<stacksApiPaths, `${string}/${string}`>;
@@ -31,60 +36,21 @@ export class StacksDataProvider implements BlockchainDataProvider {
       baseUrl: rpcUrl,
     });
   }
-  async processBlockRange(
-    chain: string,
-    address: Address,
-    fromBlock: number,
-    toBlock: number
-  ): Transaction[] | PromiseLike<Transaction[]> {
-    const key =
-      `${chain}:${address}[${fromBlock}-${toBlock}]-processed`.toLowerCase();
-    // const cached = localStorage.getItem(key);
-    // if (cached && (!window.useCache || window.useCache !== false)) {
-    //   const res = JSON.parse(cached);
-    //   res.cached = true;
-    //   return res;
-    // }
-    localStorage.removeItem(key); // remove previous cache
-
-    const txs = await this.getBlockRange(
-      chain,
-      address,
-      fromBlock,
-      toBlock,
-      client
-    );
-    if (txs.length > 0) {
-      const newTxs: Transaction[] = await Promise.all(
-        txs.map(async (tx: BlockchainTransaction) => {
-          const timestamp = await this.getBlockTimestamp(
-            chain,
-            tx.blockNumber,
-            this.client
-          );
-          const token = await this.getTokenDetails(
-            chain,
-            tx.token.address as `${string}.${string}`
-          );
-          return {
-            ...tx,
-            timestamp,
-            token,
-          };
-        })
-      );
-      // setItem(key, JSON.stringify(newTxs));
-      return newTxs;
-    } else {
-      return [];
-    }
-  }
-  getTxFromLog(chain: string, log: Log): Promise<BlockchainTransaction> {
-    throw new Error("Method not implemented.");
-  }
+  
   getBlockNumber(): Promise<number> {
-    return Stacks.getStacksHeight(this.client);
+    return this.client
+      .GET(`/extended/v2/blocks/`, {
+        params: {
+          query: {
+            limit: 1,
+            offset: 0,
+          },
+        },
+      })
+      .then((r) => r.data)
+      .then((r) => r?.results?.[0]?.height as number);
   }
+
   getLogs(filter: {
     fromBlock: number | undefined;
     toBlock: number;
@@ -108,13 +74,13 @@ export class StacksDataProvider implements BlockchainDataProvider {
     return this.client
       .GET(`/extended/v1/tx/{tx_id}`, {
         params: {
-            path: {
-                tx_id: txId
-            }
-        }
+          path: {
+            tx_id: txId,
+          },
+        },
       })
-            .then((r) => r.data)
-            .then(this.txToTransaction) 
+      .then((r) => r.data)
+      .then(this.txToTransaction);
   }
   async getTxReceipt(chain: Chain, txId: string): Promise<TxReceipt | null> {
     const txResponse = await this.client.GET(`/extended/v1/tx/{tx_id}`, {
@@ -197,62 +163,65 @@ export class StacksDataProvider implements BlockchainDataProvider {
         return null;
     }
   }
-  async getTokenDetails(chain: Chain, tokenAddress: Address): Promise<Token | null> {
-     try {
-        // Check cache first
-        const key = `${chain}:${tokenAddress}`;
-        const cached = localStorage.getItem(key);
-        if (cached) {
-          const res = JSON.parse(cached);
-          res.cached = true;
-          return res;
-        }
-    
-        // Validate contract address
-        if (!Stacks.isContractAddress(tokenAddress)) {
-          throw new Error(`Invalid contract address: ${tokenAddress}`);
-        }
-    
-        const token = await this.tokenClient
-          .GET("/metadata/v1/ft/{principal}", {
-            params: {
-              path: {
-                principal: tokenAddress,
-              },
-            },
-          })
-          .then((r) => r.data as Token | undefined);
-        if (!token || !token.name || !token.symbol || !token.decimals) {
-          throw new Error(
-            `Token details not found for contract address: ${tokenAddress}`
-          );
-        }
-    
-        const tokenDetails = {
-          name: token.name,
-          symbol: token.symbol,
-          decimals: Number(token.decimals),
-          address: tokenAddress,
-        };
-    
-        // Cache the result
-        setItem(
-          key,
-          JSON.stringify(tokenDetails, (_, value) =>
-            typeof value === "bigint" ? value.toString() : value
-          )
-        );
-    
-        return tokenDetails;
-      } catch (err) {
-        console.error("Error fetching token details:", err);
-        return {
-          name: "Unknown Token",
-          symbol: "???",
-          decimals: 18,
-          address: tokenAddress,
-        };
+  async getTokenDetails(
+    chain: Chain,
+    tokenAddress: Address
+  ): Promise<Token | null> {
+    try {
+      // Check cache first
+      const key = `${chain}:${tokenAddress}`;
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const res = JSON.parse(cached);
+        res.cached = true;
+        return res;
       }
+
+      // Validate contract address
+      if (!this.isContractAddress(tokenAddress)) {
+        throw new Error(`Invalid contract address: ${tokenAddress}`);
+      }
+
+      const token = await this.tokenClient
+        .GET("/metadata/v1/ft/{principal}", {
+          params: {
+            path: {
+              principal: tokenAddress,
+            },
+          },
+        })
+        .then((r) => r.data as Token | undefined);
+      if (!token || !token.name || !token.symbol || !token.decimals) {
+        throw new Error(
+          `Token details not found for contract address: ${tokenAddress}`
+        );
+      }
+
+      const tokenDetails = {
+        name: token.name,
+        symbol: token.symbol,
+        decimals: Number(token.decimals),
+        address: tokenAddress,
+      };
+
+      // Cache the result
+      setItem(
+        key,
+        JSON.stringify(tokenDetails, (_, value) =>
+          typeof value === "bigint" ? value.toString() : value
+        )
+      );
+
+      return tokenDetails;
+    } catch (err) {
+      console.error("Error fetching token details:", err);
+      return {
+        name: "Unknown Token",
+        symbol: "???",
+        decimals: 18,
+        address: tokenAddress,
+      };
+    }
   }
   getBlockRange(
     chain: Chain,
@@ -262,8 +231,6 @@ export class StacksDataProvider implements BlockchainDataProvider {
   ): Promise<BlockchainTransaction[]> {
     throw new Error("Method not implemented.");
   }
-
-
 
   blockToTxBatch = (
     blockResponse:
@@ -281,20 +248,21 @@ export class StacksDataProvider implements BlockchainDataProvider {
     };
   };
 
-  txToTransaction = (tx: OperationResponse["/extended/v1/tx/{tx_id}"]
-      | undefined) => {
+  txToTransaction = (
+    tx: OperationResponse["/extended/v1/tx/{tx_id}"] | undefined
+  ) => {
     return {
-        ...tx
+      ...tx,
     } as Transaction;
-  }
-  
+  };
+
   eventToLogEvent = (
     event: OperationResponse["/extended/v1/tx/events"]["events"][0]
   ) => {
     // tx.from = event.args[0] as Address;
     // tx.to = event.args[1] as Address;
     // tx.value = event.args[2];
-  
+
     switch (event.event_type) {
       case "smart_contract_log":
         return {
@@ -342,5 +310,20 @@ export class StacksDataProvider implements BlockchainDataProvider {
         console.warn("Unknown event type:", event.event_type);
     }
   };
-  
+
+  isContractAddress = (address: string): boolean => {
+    const [contractAddress, contractName] = address.split(".");
+    return (
+      this.isStacksAddress(contractAddress) !== null && contractName?.length > 0
+    );
+  };
+
+  isStacksAddress = (address: string): boolean => {
+    try {
+      return c32addressDecode(address.toUpperCase()) !== null;
+    } catch (e) {
+      console.log(address, e);
+      return false;
+    }
+  };
 }

@@ -1,19 +1,19 @@
 "use client";
 
-import {
-  type Address,
-  type BlockchainTransaction,
-  type Chain,
-  type ChainConfig,
-  type EtherscanTransfer,
-  type LogEvent,
-  type Token,
-  type Transaction,
-  type TxHash,
+import type {
+  Address,
+  BlockchainTransaction,
+  Chain,
+  ChainConfig,
+  EtherscanTransfer,
+  LogEvent,
+  Token,
+  Transaction,
+  TxHash,
 } from "@/types/index.d.ts";
 import { ethers, JsonRpcProvider, Log } from "ethers";
 import { useEffect, useRef, useState } from "react";
-import chains from "../chains.json";
+import chains from "@/chains.json";
 import ERC20_ABI from "../erc20.abi.json";
 import * as crypto from "./crypto.server";
 import { createProvider, BlockchainDataProvider } from "./rpcProvider";
@@ -82,13 +82,13 @@ export function useTxDetails(chain: Chain, txId?: string) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
   if (!chainConfig) {
     throw new Error(`Chain not found: ${String(chain)}`);
   }
   const provider = useRef(
     createProvider({
-      type: chainConfig.type,
+      namespace: chainConfig.namespace,
       rpcUrl: chainConfig.rpc[0],
     })
   );
@@ -392,7 +392,7 @@ export async function getBlockRangeForAddress(
   // }
 
   const transactions = await getTransactionsFromEtherscan(
-    String(chain),
+    chain,
     address
   );
   if (transactions) {
@@ -430,7 +430,7 @@ const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
 };
 
 export async function getTransactionsFromEtherscan(
-  chain: string,
+  chain: Chain,
   address?: string,
   tokenAddress?: string
 ): Promise<null | BlockchainTransaction[]> {
@@ -473,7 +473,7 @@ export async function getTransactionsFromEtherscan(
   // Add optional filters
   if (address) {
     const provider = new JsonRpcProvider(
-      chains[chain as keyof typeof chains].rpc[0]
+      chains[chain].rpc[0]
     );
     const addressType = await getAddressType(chain, address, provider);
     switch (addressType) {
@@ -523,13 +523,13 @@ export function useTokenDetails(chain: Chain, contractAddress: Address) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
   if (!chainConfig) {
     throw new Error(`Chain not found: ${String(chain)}`);
   }
   const provider = useRef(
     createProvider({
-      type: chainConfig.type,
+      namespace: chainConfig.namespace,
       rpcUrl: chainConfig.rpc[0],
     })
   );
@@ -545,7 +545,7 @@ export function useTokenDetails(chain: Chain, contractAddress: Address) {
         setIsLoading(true);
         setError(null);
 
-        const chainConfig = chains[chain as keyof typeof chains];
+        const chainConfig = chains[chain];
         if (!chainConfig) {
           throw new Error(`Chain not found: ${chain}`);
         }

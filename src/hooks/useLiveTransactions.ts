@@ -1,5 +1,6 @@
 import chains from "@/chains.json";
-import { Address, BlockchainTransaction, ChainConfig } from "@/types";
+import { EthereumDataProvider } from "@/providers-blockchains/ethereum";
+import { Address, BlockchainTransaction, Chain, ChainConfig } from "@/types";
 import { createProvider } from "@/utils/rpcProvider";
 import { Log, WebSocketProvider, ethers } from "ethers";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -52,7 +53,7 @@ export function useLiveTransactions({
   accountAddress,
   maxTransactionsPerMinute = 100, // default limit
 }: {
-  chain: string;
+  chain: Chain;
   tokenAddress?: Address;
   accountAddress?: Address;
   maxTransactionsPerMinute?: number;
@@ -65,7 +66,7 @@ export function useLiveTransactions({
   const timePer10Transactions = Math.ceil(
     (60 * 1000) / maxTransactionsPerMinute
   );
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
   // if (!chainConfig?.ws) {
   //   console.error(`No WebSocket configuration found for chain ${chain}`);
   //   return null;
@@ -73,7 +74,7 @@ export function useLiveTransactions({
   const httpProvider = useMemo(
     () =>
       createProvider({
-        type: chainConfig.type,
+        namespace: chainConfig.namespace,
         rpcUrl: chainConfig.rpc[0],
       }),
     [chainConfig]
@@ -81,6 +82,10 @@ export function useLiveTransactions({
 
   const processLog = useCallback(
     async (log: Log) => {
+      if (!(httpProvider instanceof EthereumDataProvider)) {
+        console.error("processLog only implemented for EthereumDataProvider");
+        return;
+      }
       const tx = await httpProvider.getTxFromLog(chain, log);
       setTransactions((prev) => [tx, ...prev].slice(0, 50));
     },
@@ -206,6 +211,10 @@ export function useLiveTransactions({
         tokenAddress,
         accountAddress
       );
+      if (chainConfig.namespace !== "eip155") {
+        console.error(`WebSocket provider not supported for chain namespace ${chainConfig.namespace}`);
+        return;
+      }
       if (!chainConfig.ws) {
         console.error(`No WebSocket configuration found for chain ${chain}`);
         return;
@@ -225,7 +234,7 @@ export function useLiveTransactions({
       //   close: () => wsProvider.removeAllListeners(),
       // };
     },
-    [throttledProcessLog, chainConfig.ws]
+    [chainConfig.namespace, chainConfig.ws, throttledProcessLog]
   );
 
   type Options = {

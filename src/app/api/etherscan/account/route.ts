@@ -1,22 +1,20 @@
 import chains from "@/chains.json";
-import type { ChainConfig } from "@/types/index.d.ts";
+import { createErrors } from "@/lib/serverUtils";
+import type { Chain, ChainConfig } from "@/types/index.d.ts";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
-  const chain = searchParams.get("chain");
+  const chain = searchParams.get("chain") as Chain;
   const tokenAddress = searchParams.get("tokenAddress");
-  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
-  const apikey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
+  const apiKey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
 
-  if (!apikey) {
-    console.error("No API key found for", chainConfig.explorer_api);
-    console.error(
-      "Please set the API key in the .env file",
-      `${chain?.toUpperCase()}_ETHERSCAN_API_KEY`
-    );
-    return Response.json({ error: "API key not configured" }, { status: 500 });
+  if (!apiKey || !chain) {
+    const errors = createErrors({ apiKey, chain, contractAddress: tokenAddress });
+    return Response.json({ error: errors.join(" ") }, { status: 500 });
   }
+
+  const chainConfig: ChainConfig = chains[chain];
 
   const params = new URLSearchParams({
     module: "account",
@@ -25,7 +23,7 @@ export async function GET(req: Request) {
     endblock: "99999999",
     sort: "desc",
     chainid: chainConfig.id.toString(),
-    apikey: apikey || "",
+    apikey: apiKey || "",
   });
 
   // Add optional filters

@@ -1,31 +1,26 @@
 "use client";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
-import CopyableValue from "./CopyableValue";
-import { useTxDetails } from "@/utils/crypto";
-import type { URI, ChainConfig, Chain } from "@/types";
 import chains from "@/chains.json";
+import { Badge } from "@/components/ui/badge";
 import { decomposeURI } from "@/lib/utils";
-import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import type { Chain, URI } from "@/types";
+import { useTxDetails } from "@/utils/crypto";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import CopyableValue from "./CopyableValue";
 import { TransactionRow } from "./TransactionRow";
 
 export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
   const { chainId, txId } = decomposeURI(uri);
+  console.log(uri, chain);
   const [txDetails, isLoading, error] = useTxDetails(chain, txId);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  let chainConfig: ChainConfig | undefined;
+  const chainConfig = chains[chain];
   let chainName: string | undefined;
-  Object.keys(chains).forEach((key) => {
-    if (chains[key as keyof typeof chains].id === chainId) {
-      chainConfig = chains[key as keyof typeof chains] as ChainConfig;
-      chainName = key;
-      return;
-    }
-  });
+  if (chainConfig.id === chainId) {
+    chainName = chain;
+  }
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -44,7 +39,7 @@ export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
   }
   return (
     <div>
-      <TransactionRow tx={txDetails} chain={chain} chainId={chainId} />
+      <TransactionRow tx={txDetails} chain={chain} />
       <div className="mt-4">
         <div className="flex flex-row gap-4">
           <div className="space-y-2">

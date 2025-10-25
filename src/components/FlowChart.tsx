@@ -1,10 +1,10 @@
 "use client";
 
-import * as chains from "@/chains.json";
+import chains from "@/chains.json";
 import Avatar from "@/components/Avatar";
 import { formatNumber, generateURI, getProfileFromNote } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
-import type { Address, ChainConfig, Token, Transaction } from "@/types";
+import type { Address, Chain, ChainConfig, Token, Transaction } from "@/types";
 import { truncateAddress } from "@/utils/crypto";
 import { ethers } from "ethers";
 import dynamic from "next/dynamic";
@@ -16,7 +16,7 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 interface FlowChartProps {
   transactions: Transaction[];
   accountAddress: Address;
-  chainId: number;
+  chain: Chain;
   tokens: Array<Token>;
   viewMode: "sankey" | "list";
 }
@@ -30,18 +30,17 @@ interface AddressNode {
 export default function FlowChart({
   transactions,
   accountAddress,
-  chainId,
+  chain,
   tokens,
   viewMode,
 }: FlowChartProps) {
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-  const chainConfig = Object.values(chains).find(
-    (c) => (c.id = chainId)
-  ) as ChainConfig;
+  const chainConfig = chains[chain];
+  const chainId = chainConfig.id;
   // Helper function to check if a transaction is marked as ignored
   const isTransactionIgnored = useCallback(
     (tx: Transaction): boolean => {
-      const uri = generateURI(chainConfig.type, {
+      const uri = generateURI(chainConfig.namespace, {
         chainId,
         txId: tx.txId,
       });
@@ -54,7 +53,7 @@ export default function FlowChart({
         (tag) => tag[0] === "t" && tag[1] === "ignore"
       );
     },
-    [chainId, notesByURI]
+    [chainConfig.namespace, chainId, notesByURI]
   );
 
   const sankeyData = useMemo(() => {
@@ -73,7 +72,10 @@ export default function FlowChart({
       if (tx.to.toLowerCase() === accountAddress.toLowerCase()) {
         // Money coming in from tx.from
         const from = tx.from.toLowerCase() as Address;
-        const uri = generateURI(chainConfig.type, { chainId, address: from });
+        const uri = generateURI(chainConfig.namespace, {
+          chainId,
+          address: from,
+        });
         subscribeToNotesByURI([uri]);
         const notes = notesByURI[uri];
         const profile = notes?.[0] ? getProfileFromNote(notes[0]) : null;
@@ -86,7 +88,10 @@ export default function FlowChart({
       } else if (tx.from.toLowerCase() === accountAddress.toLowerCase()) {
         // Money going out to tx.to
         const to = tx.to.toLowerCase() as Address;
-        const uri = generateURI(chainConfig.type, { chainId, address: to });
+        const uri = generateURI(chainConfig.namespace, {
+          chainId,
+          address: to,
+        });
         subscribeToNotesByURI([uri]);
         const notes = notesByURI[uri];
         const profile = notes?.[0] ? getProfileFromNote(notes[0]) : null;
@@ -123,7 +128,7 @@ export default function FlowChart({
     });
 
     // Add account node (blue)
-    const accountUri = generateURI(chainConfig.type, {
+    const accountUri = generateURI(chainConfig.namespace, {
       chainId,
       address: accountAddress,
     });
@@ -163,7 +168,7 @@ export default function FlowChart({
 
     // Prepare data for list view with profiles
     const sourcesWithProfiles = topSources.map((source) => {
-      const uri = generateURI(chainConfig.type, {
+      const uri = generateURI(chainConfig.namespace, {
         chainId,
         address: source.address,
       });
@@ -180,7 +185,7 @@ export default function FlowChart({
     });
 
     const destinationsWithProfiles = topDestinations.map((dest) => {
-      const uri = generateURI(chainConfig.type, {
+      const uri = generateURI(chainConfig.namespace, {
         chainId,
         address: dest.address,
       });
@@ -213,10 +218,11 @@ export default function FlowChart({
     };
   }, [
     transactions,
-    accountAddress,
+    chainConfig.namespace,
     chainId,
-    notesByURI,
+    accountAddress,
     subscribeToNotesByURI,
+    notesByURI,
     isTransactionIgnored,
   ]);
 
@@ -335,7 +341,7 @@ export default function FlowChart({
             <div className="relative">
               <Avatar
                 profile={{
-                  uri: generateURI(chainConfig.type, {
+                  uri: generateURI(chainConfig.namespace, {
                     chainId,
                     address: accountAddress,
                   }),

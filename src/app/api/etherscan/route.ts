@@ -1,5 +1,6 @@
 import chains from "@/chains.json";
-import type { ChainConfig, EtherscanResponse } from "@/types/index.d.ts";
+import { createErrors } from "@/lib/serverUtils";
+import type { Chain, ChainConfig, EtherscanResponse } from "@/types/index.d.ts";
 import { getTransactions } from "@/utils/crypto.server";
 
 let cache: Record<string, EtherscanResponse> = {};
@@ -11,19 +12,14 @@ setInterval(() => {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const address = searchParams.get("address");
-  const chain = searchParams.get("chain");
-  const contractaddress = searchParams.get("contractaddress");
-  if (!chain) {
-    return Response.json({ error: "Missing chain" }, { status: 400 });
-  }
-  if (!address && !contractaddress) {
-    return Response.json(
-      { error: "Missing address or contractaddress" },
-      { status: 400 }
-    );
+  const chain = searchParams.get("chain") as Chain;
+  const contractAddress = searchParams.get("contractaddress");
+  if (!chain || !contractAddress) {
+    const errors = createErrors({ apiKey: "n/a", chain, contractAddress });
+    return Response.json({ error: errors.join(" ") }, { status: 400 });
   }
 
-  const cacheKey = `${chain}:${contractaddress}:${address}`;
+  const cacheKey = `${chain}:${contractAddress}:${address}`;
 
   if (cache[cacheKey]) {
     console.log(">>> cache hit", cacheKey);
@@ -35,7 +31,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
+  const chainConfig = chains[chain];
   const apikey = process.env[`ETHEREUM_ETHERSCAN_API_KEY`];
 
   if (!apikey) {
@@ -48,7 +44,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const transactions = await getTransactions(chain, contractaddress, address);
+    const transactions = await getTransactions(chain, contractAddress, address);
     return Response.json(transactions, {
       headers: {
         "Content-Type": "application/json",

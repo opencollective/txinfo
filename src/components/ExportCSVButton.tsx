@@ -1,17 +1,17 @@
 "use client";
 
-import * as chains from '@/chains.json';
+import chains from '@/chains.json';
 import { Button } from "@/components/ui/button";
 import { generateURI, getProfileFromNote } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
-import type { BlockchainTransaction, ChainConfig, Transaction, URI } from "@/types";
+import type { BlockchainTransaction, Chain, ChainConfig, Transaction, URI } from "@/types";
 import { ethers } from "ethers";
 import { Download, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface ExportCSVButtonProps {
   transactions: Transaction[];
-  chain: keyof typeof chains;
+  chain: Chain;
   chainId: number;
   onError?: (error: string) => void;
   className?: string;
@@ -24,7 +24,7 @@ export default function ExportCSVButton({
   onError,
   className = "hidden sm:flex items-center gap-2",
 }: ExportCSVButtonProps) {
-  const chainConfig = chains[chain] as ChainConfig;
+  const chainConfig = chains[chain];
   const [isExporting, setIsExporting] = useState(false);
   const { subscribeToNotesByURI, notesByURI } = useNostr();
 
@@ -50,7 +50,7 @@ export default function ExportCSVButton({
       transactions.forEach((tx) => {
         // Transaction URI for description
         allUris.add(
-          generateURI(chainConfig.type, {
+          generateURI(chainConfig.namespace, {
             chainId: chainId,
             txId: tx.txId,
           })
@@ -58,7 +58,7 @@ export default function ExportCSVButton({
 
         // From address URI for profile
         allUris.add(
-          generateURI(chainConfig.type, {
+          generateURI(chainConfig.namespace, {
             chainId: chainId,
             address: tx.from,
           })
@@ -66,7 +66,7 @@ export default function ExportCSVButton({
 
         // To address URI for profile
         allUris.add(
-          generateURI(chainConfig.type, {
+          generateURI(chainConfig.namespace, {
             chainId: chainId,
             address: tx.to,
           })
@@ -75,7 +75,7 @@ export default function ExportCSVButton({
         // Token address URI if available
         if (tx.token?.address) {
           allUris.add(
-            generateURI(chainConfig.type, {
+            generateURI(chainConfig.namespace, {
               chainId: chainId,
               address: tx.token.address,
             })
@@ -127,7 +127,7 @@ export default function ExportCSVButton({
 
       const csvData = transactions.map((tx) => {
         // Get transaction description from notes
-        const txURI = generateURI(chainConfig.type, {
+        const txURI = generateURI(chainConfig.namespace, {
           chainId: chainId,
           txId: tx.txId,
         });
@@ -135,7 +135,7 @@ export default function ExportCSVButton({
         const description = txNote?.content || "";
 
         // Get profile data for from address
-        const fromURI = generateURI(chainConfig.type, {
+        const fromURI = generateURI(chainConfig.namespace, {
           chainId: chainId,
           address: tx.from,
         });
@@ -143,7 +143,7 @@ export default function ExportCSVButton({
         const fromProfile = fromNote ? getProfileFromNote(fromNote) : null;
 
         // Get profile data for to address
-        const toURI = generateURI(chainConfig.type, {
+        const toURI = generateURI(chainConfig.namespace, {
           chainId: chainId,
           address: tx.to,
         });

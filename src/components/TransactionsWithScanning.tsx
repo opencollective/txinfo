@@ -18,7 +18,7 @@ import { createProvider, BlockchainDataProvider } from "@/utils/rpcProvider";
 import { endOfMonth, format, isWithinInterval, startOfMonth } from "date-fns";
 import { X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getBlockRangeForAddress } from "../utils/crypto";
+import { getBlockRangeForAddress, processBlockRange } from "../utils/crypto";
 import Filters, { type Filter } from "./Filters";
 import StatsCards from "./StatsCards";
 
@@ -30,7 +30,7 @@ interface Props {
 const LIMIT_PER_PAGE = 50;
 
 export default function Transactions({ address, chain }: Props) {
-  const chainConfig = chains[chain] as ChainConfig;
+  const chainConfig = chains[chain];
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [progress, setProgress] = useState<{
@@ -52,7 +52,6 @@ export default function Transactions({ address, chain }: Props) {
   const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
   const rpc = useMemo(
     () =>
       typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
@@ -61,7 +60,7 @@ export default function Transactions({ address, chain }: Props) {
   const provider = useRef<BlockchainDataProvider>(
     createProvider({
       rpcUrl: rpc[0],
-      type: chainConfig.type,
+      namespace: chainConfig.namespace,
     })
   );
   const allTransactions = useRef<Transaction[]>([]);
@@ -180,13 +179,13 @@ export default function Transactions({ address, chain }: Props) {
           //   toBlock
           // );
           try {
-            const newTxs: Transaction[] =
-              await provider.current.processBlockRange(
-                chain,
-                address,
-                fromBlock,
-                toBlock
-              );
+            const newTxs: Transaction[] = await processBlockRange(
+              chain,
+              address,
+              fromBlock,
+              toBlock,
+              provider.current
+            );
             // Update progress
             setProgress({
               fromBlock,
@@ -229,7 +228,7 @@ export default function Transactions({ address, chain }: Props) {
               rpc[errorCount % rpc.length]
             );
             provider.current = createProvider({
-              type: chainConfig.type,
+              namespace: chainConfig.namespace,
               rpcUrl: rpc[errorCount % rpc.length],
             });
           }
@@ -261,7 +260,7 @@ export default function Transactions({ address, chain }: Props) {
     };
 
     fetchAllTransactions();
-  }, [chain, address, provider, errorCount, rpc]);
+  }, [chain, address, errorCount, rpc, chainConfig.namespace]);
 
   // Subscribe to notes for all transactions at once
   const { subscribeToNotesByURI } = useNostr();
@@ -271,13 +270,22 @@ export default function Transactions({ address, chain }: Props) {
     const uris = new Set<URI>();
     filteredTransactions.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
       uris.add(
-        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.from })
+        generateURI(chainConfig.namespace, {
+          chainId: chainConfig.id,
+          address: tx.from,
+        })
       );
       uris.add(
-        generateURI(chainConfig.type, { chainId: chainConfig.id, address: tx.to })
+        generateURI(chainConfig.namespace, {
+          chainId: chainConfig.id,
+          address: tx.to,
+        })
       );
       uris.add(
-        generateURI(chainConfig.type, { chainId: chainConfig.id, txId: tx.txId })
+        generateURI(chainConfig.namespace, {
+          chainId: chainConfig.id,
+          txId: tx.txId,
+        })
       );
     });
 
@@ -312,6 +320,7 @@ export default function Transactions({ address, chain }: Props) {
         transactions={filteredTransactions}
         accountAddress={address as Address}
         onChange={setTransactionsFilter}
+        chain={chain}
       />
 
       {/* Stats Cards */}
@@ -324,7 +333,7 @@ export default function Transactions({ address, chain }: Props) {
             : availableTokens
         }
         timeRangeLabel={transactionsFilter.dateRange.label}
-        chainId={chainConfig.id}
+        chain={chain}
       />
 
       {/* Transactions List */}
@@ -334,7 +343,6 @@ export default function Transactions({ address, chain }: Props) {
             key={idx}
             tx={tx}
             chain={chain}
-            chainId={chainConfig.id}
           />
         );
       })}

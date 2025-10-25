@@ -1,12 +1,12 @@
 import Transactions from "@/components/Transactions";
 import AddressInfo from "@/components/AddressInfo";
-import type { Address } from "@/types";
+import type { Address, Chain } from "@/types";
 import tokens from "@/tokens.json";
 export default async function Page({
   params,
   searchParams,
 }: {
-  params: Promise<{ chain: string; tokenAddress: string }>;
+  params: Promise<{ chain: Chain; tokenAddress: string }>;
   searchParams: Promise<{ a: string }>;
 }) {
   const { chain, tokenAddress: token } = await params;

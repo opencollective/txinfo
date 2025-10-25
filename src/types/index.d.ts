@@ -1,4 +1,5 @@
-import { ProviderType } from "@/utils/rpcProvider";
+import { ChainNamespace } from "@/utils/rpcProvider";
+import chains from "../chains.json";
 
 type HexString<Length extends number> = `0x${string}` & { length: Length };
 export type Address = HexString<42>;
@@ -101,7 +102,7 @@ export type ChainConfig = {
   explorer_name: string;
   rpc: string | string[];
   ws?: string | string[];
-  type: ProviderType;
+  namespace: ChainNamespace;
 };
 
 export type Chain = Extract<keyof typeof chains, string>;

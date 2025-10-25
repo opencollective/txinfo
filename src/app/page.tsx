@@ -27,7 +27,7 @@ const FEATURED_ACCOUNTS = [
   },
   {
     name:"Stacks Endowment (SIP-031)",
-    path: "stacks/address/SM1Z6BP8PDKYKXTZXXSKXFEY6NQ7RAM7DAEAYR045"
+    path: "/stacks/address/SM1Z6BP8PDKYKXTZXXSKXFEY6NQ7RAM7DAEAYR045"
   }
 ];
 

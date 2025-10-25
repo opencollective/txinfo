@@ -5,7 +5,7 @@ import { Address, ChainConfig, ProfileData, URI } from "@/types";
 import { npubEncode } from "nostr-tools/nip19";
 import chains from "@/chains.json";
 import { NostrNote } from "@/providers/NostrProvider";
-import { ProviderType } from "@/utils/rpcProvider";
+import { ChainNamespace } from "@/utils/rpcProvider";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -32,13 +32,13 @@ export const getChainIdFromURI = (uri: string): number | undefined => {
 };
 
 export const getChainSlugFromChainId = (
-  providerType: ProviderType,
+  providerType: ChainNamespace,
   chainId?: number
 ): string | undefined => {
   if (!chainId) return undefined;
   return Object.keys(chains).find((key) => {
     const chainConfig = chains[key as keyof typeof chains] as ChainConfig;
-    return chainConfig.id === chainId && chainConfig.type === providerType;
+    return chainConfig.id === chainId && chainConfig.namespace === providerType;
   });
 };
 
@@ -111,12 +111,14 @@ export function formatTimestamp(ts: number, format = "MMM d HH:mm"): string {
 }
 
 export function generateURI(
-  model: ProviderType,
+  namespace: ChainNamespace,
   params: { chainId?: number; txId?: string; address?: string }
 ): URI {
-  const parts: (string | number)[] = [model];
-  switch (model) {
-    case "ethereum":
+  const parts: (string | number)[] = [namespace];
+  switch (namespace) {
+    case "eip155":
+          case "stacks":
+
       if (params.chainId) {
         parts.push(params.chainId);
       }
@@ -129,21 +131,7 @@ export function generateURI(
       } else {
         throw new Error("Invalid parameters: " + JSON.stringify(params));
       }
-      return parts.join(":").toLowerCase() as URI;
-    case "stacks":
-      if (params.chainId) {
-        parts.push(params.chainId);
-      }
-      if (params.txId) {
-        parts.push("tx");
-        parts.push(params.txId);
-      } else if (params.address) {
-        parts.push("address");
-        parts.push(params.address);
-      } else {
-        throw new Error("Invalid parameters: " + JSON.stringify(params));
-      }
-      return parts.join(":").toLowerCase() as URI;
+      return parts.join(":").toLowerCase() as URI;     
     default:
       return parts.join(":").toLowerCase() as URI; // Default case for other models
   }
@@ -243,54 +231,31 @@ export function removeTagsFromContent(content: string): string {
 }
 
 type URIObject = {
-  blockchain: string;
+  chainNamespace: ChainNamespace;
   addressType: string;
   chainId?: number;
   txId?: string;
   address?: string;
 };
 
+// 
 export function decomposeURI(uri: string): URIObject {
-  if (uri.startsWith("ethereum")) {
-    const [blockchain, chainId, addressType, value] = uri.split(":");
+  if (uri.startsWith("eip155") || uri.startsWith("bip122") || uri.startsWith("stacks")) {
+    const [chainNamespace, chainId, addressType, value] = uri.split(":");
     const res: URIObject = {
-      blockchain,
-      chainId: parseInt(chainId),
+      chainNamespace: chainNamespace as ChainNamespace,
       addressType,
+      chainId: parseInt(chainId),
     };
     if (addressType === "tx") {
       res.txId = value;
     } else if (addressType === "address") {
       res.address = value;
-    }
-    return res;
-  } else if (uri.startsWith("bitcoin")) {
-    const [blockchain, chainId, addressType, value] = uri.split(":");
-    const res: URIObject = {
-      blockchain,
-      chainId: parseInt(chainId),
-      addressType,
-    };
-    if (addressType === "tx") {
-      res.txId = value;
-    } else if (addressType === "address") {
-      res.address = value;
-    }
-    return res;
-  } else if (uri.startsWith("stacks")) {
-    const [blockchain, chainId, addressType, value] = uri.split(":");
-    const res: URIObject = {
-      blockchain,
-      chainId: parseInt(chainId),
-      addressType,
-    };
-    if (addressType === "tx") {
-      res.txId = value;
-    } else if (addressType === "address") {
-      res.address = value;
+    } else if (addressType === "token") {
+      // ignore
     }
     return res;
   } else {
-    throw new Error("Invalid URI");
+    throw new Error("Invalid URI, blockchain name space unknown");
   }
 }

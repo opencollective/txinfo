@@ -4,16 +4,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNostr } from "@/providers/NostrProvider";
 import { Edit, ExternalLink } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import chains from "../chains.json";
 import CopyableValue from "./CopyableValue";
 
 import EditMetadataForm from "@/components/EditMetadataForm";
 import { generateURI, getProfileFromNote } from "@/lib/utils";
-import type { Address, ChainConfig, URI } from "@/types";
+import type { Address, Chain, ChainConfig, URI } from "@/types";
 import { getENSDetailsFromAddress } from "@/utils/crypto.server";
 import Avatar from "./Avatar";
 import TagsList from "./TagsList";
 import TagValue from "./TagValue";
+import chains from "@/chains.json";
 
 export default function AddressInfo({
   chain,
@@ -21,13 +21,13 @@ export default function AddressInfo({
   ensName,
   addressType = "address",
 }: {
-  chain: string;
+  chain: Chain;
   address: Address;
   ensName?: string;
   addressType?: "address" | "token" | "eoa" | "contract";
 }) {
-  const chainConfig = chains[chain as keyof typeof chains] as ChainConfig;
-  const providerType = chainConfig.type;
+  const chainConfig = chains[chain];
+  const providerType = chainConfig.namespace;
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { notesByURI, subscribeToNotesByURI } = useNostr();
@@ -68,14 +68,14 @@ export default function AddressInfo({
     };
     if (!latestNote?.content) {
       switch (providerType) {
-        case "ethereum":
+        case "eip155":
           fetchENSDetails();
           break;
         default:
         // For other chains, we do not support name, so we can skip this
       }
     }
-  }, [address, uri, ensName, latestNote]);
+  }, [address, uri, ensName, latestNote, providerType]);
 
   if (!chainConfig) {
     return <div>Chain not found</div>;

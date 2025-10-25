@@ -1,5 +1,4 @@
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import chains from "@/chains.json";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,15 +8,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { decomposeURI, generateURI, getAddressFromURI } from "@/lib/utils";
+import { useNostr } from "@/providers/NostrProvider";
+import { Chain, ChainConfig, ProfileData, URI } from "@/types";
 import { Loader2, User } from "lucide-react";
 import Link from "next/link";
-import { Address, ChainConfig, ProfileData, URI } from "@/types";
-import { generateURI, getAddressFromURI, getChainIdFromURI } from "@/lib/utils";
-import { useNostr } from "@/providers/NostrProvider";
 import { useState } from "react";
-import chains from "@/chains.json";
-import { ProviderType } from "@/utils/rpcProvider";
 
 export default function NostrEditProfileModal({
   uri,
@@ -30,11 +29,13 @@ export default function NostrEditProfileModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const chainId = getChainIdFromURI(uri);
-  let chain: keyof typeof chains | undefined = undefined;
+  const {chainNamespace, chainId} = decomposeURI(uri);
+  let chain: Chain|undefined = undefined;
+
+  // Fix: Type the entries properly
   Object.entries(chains).forEach(([chainSlug, c]) => {
-    if (c.id === chainId) {
-      chain = chainSlug as keyof typeof chains;
+    if (c.id === chainId && c.namespace === chainNamespace) {
+      chain = chainSlug as Chain;
     }
   });
 
@@ -55,7 +56,7 @@ export default function NostrEditProfileModal({
   if (!chain) {
     return <>Unsupported chain</>;
   }
-  const chainConfig = chains[chain] as ChainConfig;
+  const chainConfig: ChainConfig = chains[chain];
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +65,7 @@ export default function NostrEditProfileModal({
     setIsSubmittingProfile(true);
 
     try {
-      const uri = generateURI(chainConfig.type, { chainId, address });
+      const uri = generateURI(chainConfig.namespace, { chainId, address });
       const previousNote = notesByURI[uri] ? notesByURI[uri][0] : null;
 
       const tags = [

@@ -1,7 +1,7 @@
 "use client";
 
-import { TxReceipt } from "@/utils/crypto";
-import * as EthereumHelpers from "@/utils/helpers-ether";
+import { setItem, TxReceipt } from "@/utils/crypto";
+import * as crypto from "@/utils/crypto.server";
 import {
   Block,
   ethers,
@@ -22,23 +22,8 @@ import {
   TxHash,
 } from "../types/index";
 import { BlockchainDataProvider } from "../utils/rpcProvider";
-import * as crypto from "@/utils/crypto.server";
 
 export const truncateAddress = crypto.truncateAddress;
-
-export const setItem = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (err) {
-    console.error(
-      "Error setting item:",
-      err,
-      "item length:",
-      value.length,
-      `${((value.length * 2) / 1024 / 1024).toFixed(2)}MB`
-    );
-  }
-};
 
 export class EthereumDataProvider implements BlockchainDataProvider {
   provider: JsonRpcProvider;
@@ -47,15 +32,7 @@ export class EthereumDataProvider implements BlockchainDataProvider {
     this.provider = new JsonRpcProvider(rpcUrl);
   }
 
-  processBlockRange(
-    chain: string,
-    address: Address,
-    fromBlock: number,
-    toBlock: number
-  ): Transaction[] | PromiseLike<Transaction[]> {
-    throw new Error("Method not implemented.");
-  }
-  async getTxFromLog(chain: string, log: Log): Promise<BlockchainTransaction> {
+  async getTxFromLog(chain: Chain, log: Log): Promise<BlockchainTransaction> {
     const contract = new ethers.Contract(log.address, ERC20_ABI, this.provider);
     const parsedLog = contract.interface.parseLog(log);
     const from = parsedLog?.args[0].toLowerCase() as Address;
@@ -96,15 +73,11 @@ export class EthereumDataProvider implements BlockchainDataProvider {
   }
 
   getTxBatch(blockNumber: number): Promise<TxBatch | null> {
-    return this.provider
-      .getBlock(blockNumber)
-      .then(this.blockToTxBatch);
+    return this.provider.getBlock(blockNumber).then(this.blockToTxBatch);
   }
 
   getTransaction(txId: string): Promise<Transaction | null> {
-    return this.provider
-      .getTransaction(txId)
-      .then(this.txToTransaction);
+    return this.provider.getTransaction(txId).then(this.txToTransaction);
   }
 
   async getTxReceipt(chain: Chain, txId: string): Promise<TxReceipt | null> {

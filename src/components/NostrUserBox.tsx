@@ -4,6 +4,7 @@ import { decode, npubEncode } from "nostr-tools/nip19";
 import { getPublicKey } from "nostr-tools";
 import { generateAvatar } from "@/lib/utils";
 import { useProfile } from "@/providers/NostrProvider";
+import Image from "next/image";
 
 export function NostrUserBox() {
   const [showPopover, setShowPopover] = useState(false);
@@ -133,7 +134,7 @@ export function NostrUserBox() {
         }}
       >
         {profile?.picture ? (
-          <img
+          <Image
             src={profile.picture}
             alt={profile.name || "Profile"}
             style={{
@@ -146,7 +147,7 @@ export function NostrUserBox() {
         ) : initial ? (
           initial
         ) : defaultAvatar ? (
-          <img
+          <Image
             src={defaultAvatar}
             alt="Default Avatar"
             style={{
@@ -201,7 +202,7 @@ export function NostrUserBox() {
                   }}
                 >
                   {profile?.picture ? (
-                    <img
+                    <Image
                       src={profile.picture}
                       alt={profile.name || "Profile"}
                       style={{
