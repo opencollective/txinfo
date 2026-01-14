@@ -10,6 +10,7 @@ const SUPPORTED_CHAINS = [
   { value: "optimism", label: "Optimism", shortLabel: "Op" },
   { value: "arbitrum", label: "Arbitrum", shortLabel: "Arb" },
   { value: "celo", label: "Celo", shortLabel: "Celo" },
+  { value: "stacks", label: "Stacks", shortLabel: "Stx" },
 ];
 
 const TYPES = [

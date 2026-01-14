@@ -1,34 +1,32 @@
 "use client";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
-import CopyableValue from "./CopyableValue";
-import { useTxDetails } from "@/utils/crypto";
-import type { URI, ChainConfig } from "@/types";
 import chains from "@/chains.json";
+import { Badge } from "@/components/ui/badge";
 import { decomposeURI } from "@/lib/utils";
-import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import type { Chain, URI } from "@/types";
+import { useTxDetails } from "@/utils/crypto";
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import CopyableValue from "./CopyableValue";
 import { TransactionRow } from "./TransactionRow";
 
-export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
-  const { chainId, txHash } = decomposeURI(uri);
-  const [txDetails, isLoading] = useTxDetails(chain, txHash);
+export default function TxDetails({ uri, chain }: { chain: Chain; uri: URI }) {
+  const { chainId, txId } = decomposeURI(uri);
+  console.log(uri, chain);
+  const [txDetails, isLoading, error] = useTxDetails(chain, txId);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  let chainConfig: ChainConfig | undefined;
+  const chainConfig = chains[chain];
   let chainName: string | undefined;
-  Object.keys(chains).forEach((key) => {
-    if (chains[key as keyof typeof chains].id === chainId) {
-      chainConfig = chains[key as keyof typeof chains];
-      chainName = key;
-      return;
-    }
-  });
+  if (chainConfig.id === chainId) {
+    chainName = chain;
+  }
 
   if (isLoading) {
     return <div>Loading...</div>;
+  }
+  if (error) {
+    return <div>Error loading transaction details: {error.message}</div>;
   }
   if (!txDetails) {
     return <div>No tx details...</div>;
@@ -41,7 +39,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
   }
   return (
     <div>
-      <TransactionRow tx={txDetails} chain={chain} chainId={chainId} />
+      <TransactionRow tx={txDetails} chain={chain} />
       <div className="mt-4">
         <div className="flex flex-row gap-4">
           <div className="space-y-2">
@@ -54,9 +52,9 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
           <div className="space-y-2">
             <div className="text-sm font-semibold">Transaction Hash</div>
             <div className="flex flex-row gap-2 h-7 items-center">
-              <CopyableValue value={txHash ?? ""} truncate />
+              <CopyableValue value={txId ?? ""} truncate />
               <a
-                href={`${chainConfig?.explorer_url}/tx/${txHash}`}
+                href={`${chainConfig?.explorer_url}/tx/${txId}`}
                 target="_blank"
                 title={`View transaction on ${chainConfig?.explorer_name}`}
                 rel="noopener noreferrer"
@@ -71,7 +69,7 @@ export default function TxDetails({ uri, chain }: { chain: string; uri: URI }) {
             <div className="text-sm font-semibold">Token</div>
             <div className="flex gap-2 h-7 items-center">
               <Link
-                href={`/${chain}/token/${token?.address}`}
+                href={`/${String(chain)}/token/${token?.address}`}
                 title={`View ${token?.symbol} token on TxInfo`}
               >
                 <span className="text-base">{token?.name}</span>

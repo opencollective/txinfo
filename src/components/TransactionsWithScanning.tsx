@@ -1,29 +1,36 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
-import { JsonRpcProvider } from "ethers";
-import { processBlockRange, getBlockRangeForAddress } from "../utils/crypto";
-import chains from "../chains.json";
-import { Button } from "@/components/ui/button";
-import React from "react";
+import chains from "@/chains.json";
 import { TransactionRow } from "@/components/TransactionRow";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { X } from "lucide-react";
-import type { Address, Token, URI, Transaction } from "@/types";
 import { cn, generateURI } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
-import StatsCards from "./StatsCards";
+import type {
+  Address,
+  Chain,
+  ChainConfig,
+  Token,
+  Transaction,
+  URI,
+} from "@/types";
+import { createProvider, BlockchainDataProvider } from "@/utils/rpcProvider";
+import { endOfMonth, format, isWithinInterval, startOfMonth } from "date-fns";
+import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getBlockRangeForAddress, processBlockRange } from "../utils/crypto";
 import Filters, { type Filter } from "./Filters";
+import StatsCards from "./StatsCards";
 
 interface Props {
-  address: string;
-  chain: string;
+  address: Address;
+  chain: Chain;
 }
 
 const LIMIT_PER_PAGE = 50;
 
 export default function Transactions({ address, chain }: Props) {
+  const chainConfig = chains[chain];
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [progress, setProgress] = useState<{
@@ -45,13 +52,17 @@ export default function Transactions({ address, chain }: Props) {
   const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const chainConfig = chains[chain as keyof typeof chains];
   const rpc = useMemo(
     () =>
       typeof chainConfig.rpc === "string" ? [chainConfig.rpc] : chainConfig.rpc,
     [chainConfig]
   );
-  const provider = useRef<JsonRpcProvider>(new JsonRpcProvider(rpc[0]));
+  const provider = useRef<BlockchainDataProvider>(
+    createProvider({
+      rpcUrl: rpc[0],
+      namespace: chainConfig.namespace,
+    })
+  );
   const allTransactions = useRef<Transaction[]>([]);
   const limit = 500;
   let errorCount = 0;
@@ -70,7 +81,8 @@ export default function Transactions({ address, chain }: Props) {
           tx.token?.address &&
           tx.token?.symbol &&
           tx.token?.symbol?.length > 0 &&
-          tx.token?.symbol?.length <= 6
+          tx.token?.symbol?.length <= 6 &&
+          tx.token.address !== "native"
         ) {
           tokenMap[tx.token.address] = tx.token;
         }
@@ -215,15 +227,16 @@ export default function Transactions({ address, chain }: Props) {
               "switching to rpc",
               rpc[errorCount % rpc.length]
             );
-            provider.current = new JsonRpcProvider(
-              rpc[errorCount % rpc.length]
-            );
+            provider.current = createProvider({
+              namespace: chainConfig.namespace,
+              rpcUrl: rpc[errorCount % rpc.length],
+            });
           }
         }
 
         setTransactions((prevTxs) => {
           const uniques = allTransactions.current.filter((tx: Transaction) => {
-            const isDuplicate = prevTxs.some((t) => t.txHash === tx.txHash);
+            const isDuplicate = prevTxs.some((t) => t.txId === tx.txId);
             // if (isDuplicate) {
             //   console.log("!!! duplicate", tx);
             // }
@@ -235,7 +248,7 @@ export default function Transactions({ address, chain }: Props) {
         });
         // Store in localStorage
         setItem(
-          `${chain}:${address}:transactions`,
+          `${String(chain)}:${address}:transactions`,
           JSON.stringify(allTransactions.current)
         );
       } catch (error) {
@@ -247,7 +260,7 @@ export default function Transactions({ address, chain }: Props) {
     };
 
     fetchAllTransactions();
-  }, [chain, address, provider, errorCount, rpc]);
+  }, [chain, address, errorCount, rpc, chainConfig.namespace]);
 
   // Subscribe to notes for all transactions at once
   const { subscribeToNotesByURI } = useNostr();
@@ -257,13 +270,22 @@ export default function Transactions({ address, chain }: Props) {
     const uris = new Set<URI>();
     filteredTransactions.slice(0, LIMIT_PER_PAGE).forEach((tx: Transaction) => {
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, address: tx.from })
+        generateURI(chainConfig.namespace, {
+          chainId: chainConfig.id,
+          address: tx.from,
+        })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, address: tx.to })
+        generateURI(chainConfig.namespace, {
+          chainId: chainConfig.id,
+          address: tx.to,
+        })
       );
       uris.add(
-        generateURI("ethereum", { chainId: chainConfig.id, txHash: tx.txHash })
+        generateURI(chainConfig.namespace, {
+          chainId: chainConfig.id,
+          txId: tx.txId,
+        })
       );
     });
 
@@ -298,6 +320,7 @@ export default function Transactions({ address, chain }: Props) {
         transactions={filteredTransactions}
         accountAddress={address as Address}
         onChange={setTransactionsFilter}
+        chain={chain}
       />
 
       {/* Stats Cards */}
@@ -310,7 +333,7 @@ export default function Transactions({ address, chain }: Props) {
             : availableTokens
         }
         timeRangeLabel={transactionsFilter.dateRange.label}
-        chainId={chainConfig.id}
+        chain={chain}
       />
 
       {/* Transactions List */}
@@ -320,7 +343,6 @@ export default function Transactions({ address, chain }: Props) {
             key={idx}
             tx={tx}
             chain={chain}
-            chainId={chainConfig.id}
           />
         );
       })}

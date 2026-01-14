@@ -1,19 +1,27 @@
 "use client";
 
-import { ethers, Log, JsonRpcProvider } from "ethers";
-import ERC20_ABI from "../erc20.abi.json";
-import chains from "../chains.json";
-import { useState, useEffect, useRef } from "react";
 import type {
-  Transaction,
-  Token,
-  EtherscanTransfer,
   Address,
-  TxHash,
   BlockchainTransaction,
+  Chain,
+  ChainConfig,
+  EtherscanTransfer,
+  LogEvent,
+  Token,
+  Transaction,
+  TxHash,
 } from "@/types/index.d.ts";
+import { ethers, JsonRpcProvider, Log } from "ethers";
+import { useEffect, useRef, useState } from "react";
+import chains from "@/chains.json";
+import ERC20_ABI from "../erc20.abi.json";
 import * as crypto from "./crypto.server";
+import { createProvider, BlockchainDataProvider } from "./rpcProvider";
 export const truncateAddress = crypto.truncateAddress;
+
+export const NativeToken: Token = {
+  address: "native"
+}
 
 const cache = {};
 const localStorage =
@@ -31,7 +39,7 @@ const localStorage =
         },
       };
 
-const setItem = (key: string, value: string) => {
+export const setItem = (key: string, value: string) => {
   try {
     localStorage.setItem(key, value);
   } catch (err) {
@@ -46,17 +54,17 @@ const setItem = (key: string, value: string) => {
 };
 
 export const getBlockTimestamp = async (
-  chain: string,
+  chain: Chain,
   blockNumber: number,
-  provider: JsonRpcProvider
+  provider: BlockchainDataProvider
 ) => {
-  const key = `${chain}:${blockNumber}`;
+  const key = `${String(chain)}:${blockNumber}`;
   const cached = localStorage.getItem(key);
   if (cached) {
     return JSON.parse(cached);
   }
 
-  const block = await provider.getBlock(blockNumber);
+  const block = await provider.getTxBatch(blockNumber);
   if (!block) {
     throw new Error(`Block not found: ${blockNumber}`);
   }
@@ -64,98 +72,57 @@ export const getBlockTimestamp = async (
   return block.timestamp;
 };
 
-export async function getTokenDetails(
-  chain: string,
-  contractAddress: string,
-  provider: JsonRpcProvider
-) {
-  try {
-    // Check cache first
-    const key = `${chain}:${contractAddress}`;
-    const cached = localStorage.getItem(key);
-    if (cached) {
-      const res = JSON.parse(cached);
-      res.cached = true;
-      return res;
-    }
-
-    // Validate contract address
-    if (!ethers.isAddress(contractAddress)) {
-      throw new Error(`Invalid contract address: ${contractAddress}`);
-    }
-
-    const contract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
-
-    const [name, symbol, decimals] = await Promise.all([
-      contract.name(),
-      contract.symbol(),
-      contract.decimals(),
-    ]);
-
-    const tokenDetails = {
-      name,
-      symbol,
-      decimals: Number(decimals),
-      address: contractAddress,
-    };
-
-    // Cache the result
-    setItem(
-      key,
-      JSON.stringify(tokenDetails, (_, value) =>
-        typeof value === "bigint" ? value.toString() : value
-      )
-    );
-
-    return tokenDetails;
-  } catch (err) {
-    console.error("Error fetching token details:", err);
-    return {
-      name: "Unknown Token",
-      symbol: "???",
-      decimals: 18,
-      address: contractAddress,
-    };
-  }
-}
-
-type LogEvent = {
-  name: string;
-  args: string[];
-  address: string;
-};
-
 interface TxDetails extends BlockchainTransaction {
   token: Token;
   events: LogEvent[];
 }
 
-export function useTxDetails(chain: string, txHash?: string) {
+export function useTxDetails(chain: Chain, txId?: string) {
   const [txDetails, setTxDetails] = useState<TxDetails | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const chainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain];
   if (!chainConfig) {
-    throw new Error(`Chain not found: ${chain}`);
+    throw new Error(`Chain not found: ${String(chain)}`);
   }
-  const provider = useRef(new JsonRpcProvider(chainConfig.rpc[0]));
+  const provider = useRef(
+    createProvider({
+      namespace: chainConfig.namespace,
+      rpcUrl: chainConfig.rpc[0],
+    })
+  );
 
   useEffect(() => {
     const fetchToken = async () => {
-      if (!txHash) return;
+      console.log("useTxDetails", chain, txId);
+      if (!txId) {
+        setError(new Error("Transaction id is required"));
+        setIsLoading(false);
+        return;
+      }
       try {
-        const txReceipt = await getTxReceipt(chain, txHash, provider.current);
-        if (!txReceipt) return;
-        const token = await getTokenDetails(
-          chain,
-          txReceipt.contract_address,
-          provider.current
-        );
+        const txReceipt = await provider.current.getTxReceipt(chain, txId);
+        if (!txReceipt) {
+          setError(new Error("Transaction not found"));
+          setIsLoading(false);
+          return;
+        }
+        const token = txReceipt.contract_address
+          ? await provider.current.getTokenDetails(
+              chain,
+              txReceipt.contract_address
+            )
+          : NativeToken;
+        if (!token) {
+          setError(new Error("Token not found"));
+          setIsLoading(false);
+          return;
+        }
         const tx: Partial<Transaction> = {
           token,
           timestamp: txReceipt.timestamp,
-          txHash: txReceipt.hash as TxHash,
+          txId: txReceipt.hash as TxHash,
         };
         txReceipt.events.forEach((event: LogEvent) => {
           if (event.name === "Transfer") {
@@ -167,12 +134,13 @@ export function useTxDetails(chain: string, txHash?: string) {
         setTxDetails(tx as TxDetails);
         setIsLoading(false);
       } catch (err) {
+        // Optional, for EVM providers
         setError(err instanceof Error ? err : new Error("Unknown error"));
         setIsLoading(false);
       }
     };
     fetchToken();
-  }, [chain, txHash]);
+  }, [chain, txId]);
 
   return [txDetails, isLoading, error] as const;
 }
@@ -239,100 +207,14 @@ export async function getAddressType(
   return res;
 }
 
-type TxReceipt = {
+export type TxReceipt = {
   chainId: number;
   hash: string;
   blockNumber: number;
   timestamp: number;
   events: LogEvent[];
-  contract_address: string;
+  contract_address: Address;
 };
-
-export async function getTxReceipt(
-  chain: string,
-  tx_hash: string,
-  provider: JsonRpcProvider
-): Promise<TxReceipt | null> {
-  const tx = await provider.getTransaction(tx_hash);
-  if (!tx?.to) return null;
-
-  if (localStorage.getItem(`TxReceipt:${tx.hash}`)) {
-    return JSON.parse(localStorage.getItem(`TxReceipt:${tx.hash}`) || "{}");
-  }
-
-  const contract = new ethers.Contract(tx.to, ERC20_ABI, provider);
-  const receipt = await provider.getTransactionReceipt(tx_hash);
-
-  if (!receipt) return null;
-  const blockNumber = receipt?.blockNumber;
-  const timestamp = await getBlockTimestamp(chain, blockNumber, provider);
-
-  try {
-    const decoded = contract.interface.parseTransaction({ data: tx.data });
-
-    let contract_address = tx.to;
-    // Parse all logs from the receipt
-    const processLog = (log: Log) => {
-      try {
-        // Create a new contract instance with the log's address
-        const logContract = new ethers.Contract(
-          log.address,
-          ERC20_ABI,
-          provider
-        );
-        const parsedLog = logContract.interface.parseLog({
-          topics: log.topics,
-          data: log.data,
-        });
-
-        // If we find a Transfer event, this is likely the main token contract
-        if (parsedLog?.name === "Transfer") {
-          contract_address = log.address;
-        }
-
-        return {
-          name: parsedLog?.name,
-          args: Array.from(parsedLog?.args || []),
-          address: log.address,
-        };
-      } catch (err) {
-        console.log("Could not parse log:", log, err);
-        return null;
-      }
-    };
-
-    const events = receipt?.logs.map(processLog);
-    const filteredEvents = events.filter((e) => Boolean(e?.name)); // Remove null entries
-
-    const res = {
-      chainId: Number(tx.chainId),
-      hash: tx.hash,
-      blockNumber,
-      timestamp,
-      contract_address, // This might be different from tx.to if it's a proxy
-      events: filteredEvents,
-    };
-
-    setItem(
-      `TxReceipt:${tx.hash}`,
-      JSON.stringify(res, (_, value) =>
-        typeof value === "bigint" ? value.toString() : value
-      )
-    );
-
-    return res as TxReceipt;
-  } catch (error) {
-    console.error("Error decoding transaction:", error);
-    return {
-      chainId: Number(tx.chainId),
-      hash: tx.hash,
-      blockNumber,
-      timestamp,
-      contract_address: tx.to,
-      events: [],
-    };
-  }
-}
 
 /**
  * Get the transactions in a block range from or to an address (sorted by time DESC, so newest first)
@@ -343,14 +225,15 @@ export async function getTxReceipt(
  * @param provider - The provider to use
  */
 export async function processBlockRange(
-  chain: string,
-  address: string,
+  chain: Chain,
+  address: Address,
   fromBlock: number,
   toBlock: number,
-  provider: JsonRpcProvider
+  provider: BlockchainDataProvider
 ): Promise<Transaction[]> {
-  const key =
-    `${chain}:${address}[${fromBlock}-${toBlock}]-processed`.toLowerCase();
+  const key = `${String(
+    chain
+  )}:${address}[${fromBlock}-${toBlock}]-processed`.toLowerCase();
   // const cached = localStorage.getItem(key);
   // if (cached && (!window.useCache || window.useCache !== false)) {
   //   const res = JSON.parse(cached);
@@ -359,16 +242,22 @@ export async function processBlockRange(
   // }
   localStorage.removeItem(key); // remove previous cache
 
-  const txs = await getBlockRange(chain, address, fromBlock, toBlock, provider);
+  const txs = await provider.getBlockRange(chain, address, fromBlock, toBlock);
   if (txs.length > 0) {
-    const newTxs: Transaction[] = await Promise.all(
-      txs.map(async (tx: BlockchainTransaction) => {
+    const newTxs = await Promise.all(
+      txs.map(async (tx) => {
         const timestamp = await getBlockTimestamp(
           chain,
           tx.blockNumber,
           provider
         );
-        const token = await getTokenDetails(chain, tx.token.address, provider);
+        const token =
+          tx.token.address === "native"
+            ? NativeToken
+            : await provider.getTokenDetails(chain, tx.token.address);
+        if (!token) {
+          throw new Error(`invalid token address ${tx.token.address}`);
+        }
         return {
           ...tx,
           timestamp,
@@ -453,7 +342,7 @@ export async function getBlockRange(
         blockNumber: log.blockNumber,
         txIndex: log.transactionIndex,
         logIndex: log.index,
-        txHash: log.transactionHash,
+        txId: log.transactionHash,
         token: {
           address: log.address,
         },
@@ -485,31 +374,6 @@ export async function getBlockRange(
   return res.filter((tx) => tx !== null) as BlockchainTransaction[];
 }
 
-export async function getTxFromLog(
-  chain: string,
-  log: Log,
-  provider: JsonRpcProvider
-): Promise<BlockchainTransaction> {
-  const contract = new ethers.Contract(log.address, ERC20_ABI, provider);
-  const parsedLog = contract.interface.parseLog(log);
-  const from = parsedLog?.args[0].toLowerCase() as Address;
-  const to = parsedLog?.args[1].toLowerCase() as Address;
-  const value = parsedLog?.args[2].toString();
-  const block = await provider.getBlock(log.blockNumber);
-  const token = await getTokenDetails(chain, log.address, provider);
-  const tx = {
-    blockNumber: log.blockNumber,
-    timestamp: block?.timestamp as number,
-    txIndex: log.transactionIndex,
-    logIndex: log.index,
-    txHash: log.transactionHash as TxHash,
-    token,
-    from,
-    to,
-    value,
-  };
-  return tx;
-}
 
 /**
  * Get the first and last block for an address
@@ -518,8 +382,8 @@ export async function getTxFromLog(
  * @returns { firstBlock: number, lastBlock: number | undefined }
  */
 export async function getBlockRangeForAddress(
-  chain: string,
-  address: string
+  chain: Chain,
+  address: Address
 ): Promise<null | { firstBlock: number; lastBlock: number | undefined }> {
   // const key = `${chain}:${address}`;
   // const cached = localStorage.getItem(key);
@@ -527,7 +391,10 @@ export async function getBlockRangeForAddress(
   //   return JSON.parse(cached);
   // }
 
-  const transactions = await getTransactionsFromEtherscan(chain, address);
+  const transactions = await getTransactionsFromEtherscan(
+    chain,
+    address
+  );
   if (transactions) {
     const firstBlock = Number(transactions[0].blockNumber);
     const lastBlock =
@@ -547,7 +414,7 @@ const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
   if (!Array.isArray(data)) return [];
   return data.map((tx: EtherscanTransfer) => ({
     blockNumber: Number(tx.blockNumber),
-    txHash: tx.hash,
+    txId: tx.hash,
     txIndex: Number(tx.transactionIndex),
     timestamp: Number(tx.timeStamp),
     from: tx.from,
@@ -563,7 +430,7 @@ const convertEtherscanDataToTransactionType = (data: EtherscanTransfer[]) => {
 };
 
 export async function getTransactionsFromEtherscan(
-  chain: string,
+  chain: Chain,
   address?: string,
   tokenAddress?: string
 ): Promise<null | BlockchainTransaction[]> {
@@ -606,7 +473,7 @@ export async function getTransactionsFromEtherscan(
   // Add optional filters
   if (address) {
     const provider = new JsonRpcProvider(
-      chains[chain as keyof typeof chains].rpc[0]
+      chains[chain].rpc[0]
     );
     const addressType = await getAddressType(chain, address, provider);
     switch (addressType) {
@@ -651,15 +518,21 @@ export async function getTransactionsFromEtherscan(
   }
 }
 
-export function useTokenDetails(chain: string, contractAddress: string) {
-  const [token, setToken] = useState<{
-    name: string;
-    symbol: string;
-    decimals: number;
-    address: string;
-  } | null>(null);
+export function useTokenDetails(chain: Chain, contractAddress: Address) {
+  const [token, setToken] = useState<Token | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  const chainConfig = chains[chain];
+  if (!chainConfig) {
+    throw new Error(`Chain not found: ${String(chain)}`);
+  }
+  const provider = useRef(
+    createProvider({
+      namespace: chainConfig.namespace,
+      rpcUrl: chainConfig.rpc[0],
+    })
+  );
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -672,16 +545,14 @@ export function useTokenDetails(chain: string, contractAddress: string) {
         setIsLoading(true);
         setError(null);
 
-        const chainConfig = chains[chain as keyof typeof chains];
+        const chainConfig = chains[chain];
         if (!chainConfig) {
           throw new Error(`Chain not found: ${chain}`);
         }
 
-        const provider = new JsonRpcProvider(chainConfig.rpc[0]);
-        const tokenDetails = await getTokenDetails(
+        const tokenDetails = await provider.current.getTokenDetails(
           chain,
-          contractAddress,
-          provider
+          contractAddress
         );
 
         setToken(tokenDetails);

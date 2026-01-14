@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { JsonRpcProvider, WebSocketProvider, Log, ethers } from "ethers";
 import chains from "@/chains.json";
-import { Address, BlockchainTransaction, ChainConfig } from "@/types";
-import { getTxFromLog } from "@/utils/crypto";
+import { EthereumDataProvider } from "@/providers-blockchains/ethereum";
+import { Address, BlockchainTransaction, Chain, ChainConfig } from "@/types";
+import { createProvider } from "@/utils/rpcProvider";
+import { Log, WebSocketProvider, ethers } from "ethers";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 
@@ -52,7 +53,7 @@ export function useLiveTransactions({
   accountAddress,
   maxTransactionsPerMinute = 100, // default limit
 }: {
-  chain: string;
+  chain: Chain;
   tokenAddress?: Address;
   accountAddress?: Address;
   maxTransactionsPerMinute?: number;
@@ -65,19 +66,27 @@ export function useLiveTransactions({
   const timePer10Transactions = Math.ceil(
     (60 * 1000) / maxTransactionsPerMinute
   );
-  const chainConfig: ChainConfig = chains[chain as keyof typeof chains];
+  const chainConfig = chains[chain];
   // if (!chainConfig?.ws) {
   //   console.error(`No WebSocket configuration found for chain ${chain}`);
   //   return null;
   // }
   const httpProvider = useMemo(
-    () => new JsonRpcProvider(chainConfig.rpc[0]),
+    () =>
+      createProvider({
+        namespace: chainConfig.namespace,
+        rpcUrl: chainConfig.rpc[0],
+      }),
     [chainConfig]
   );
 
   const processLog = useCallback(
     async (log: Log) => {
-      const tx = await getTxFromLog(chain, log, httpProvider);
+      if (!(httpProvider instanceof EthereumDataProvider)) {
+        console.error("processLog only implemented for EthereumDataProvider");
+        return;
+      }
+      const tx = await httpProvider.getTxFromLog(chain, log);
       setTransactions((prev) => [tx, ...prev].slice(0, 50));
     },
     [httpProvider, chain]
@@ -126,11 +135,9 @@ export function useLiveTransactions({
     async (
       tokenAddress: Address | undefined,
       accountAddress: Address | undefined,
-      processLog: (log: Log) => void,
       fromBlock?: number,
       interval?: number
     ) => {
-      const httpProvider = new JsonRpcProvider(chainConfig.rpc[0]);
       const filters = getFilters(tokenAddress, accountAddress);
       let lastBlock = fromBlock;
       let processingBacklog = false;
@@ -166,7 +173,6 @@ export function useLiveTransactions({
                 toBlock,
               });
               logsReceived += logs.length;
-              await Promise.all(logs.map(throttledProcessLog));
             })
           );
           processingBacklog = false;
@@ -186,7 +192,7 @@ export function useLiveTransactions({
       }
       setInterval(processBlockRange, interval ?? 20000);
     },
-    [chainConfig, throttledProcessLog]
+    [httpProvider]
   );
 
   const startWebsocket = useCallback(
@@ -205,6 +211,10 @@ export function useLiveTransactions({
         tokenAddress,
         accountAddress
       );
+      if (chainConfig.namespace !== "eip155") {
+        console.error(`WebSocket provider not supported for chain namespace ${chainConfig.namespace}`);
+        return;
+      }
       if (!chainConfig.ws) {
         console.error(`No WebSocket configuration found for chain ${chain}`);
         return;
@@ -224,7 +234,7 @@ export function useLiveTransactions({
       //   close: () => wsProvider.removeAllListeners(),
       // };
     },
-    [throttledProcessLog, chainConfig.ws]
+    [chainConfig.namespace, chainConfig.ws, throttledProcessLog]
   );
 
   type Options = {
@@ -239,7 +249,6 @@ export function useLiveTransactions({
         startPolling(
           tokenAddress,
           accountAddress,
-          processLog,
           options.fromBlock,
           options.interval
         );

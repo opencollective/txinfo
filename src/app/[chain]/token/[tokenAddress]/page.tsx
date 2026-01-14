@@ -1,24 +1,26 @@
 import Transactions from "@/components/Transactions";
 import AddressInfo from "@/components/AddressInfo";
-import type { Address } from "@/types";
+import type { Address, Chain } from "@/types";
 import tokens from "@/tokens.json";
 export default async function Page({
   params,
   searchParams,
 }: {
-  params: Promise<{ chain: string; tokenAddress: string }>;
+  params: Promise<{ chain: Chain; tokenAddress: string }>;
   searchParams: Promise<{ a: string }>;
 }) {
   const { chain, tokenAddress: token } = await params;
   const { a: accountAddress } = await searchParams;
 
+  // get address for well-known token names
   const chainTokens = tokens[chain as keyof typeof tokens] || {};
+
   const tokenAddress = token.startsWith("0x")
     ? token
     : (chainTokens[token.toLowerCase() as keyof typeof chainTokens] as Address);
 
   if (!tokenAddress) {
-    return <div>Token not found</div>;
+    return <div>Token not found. ({token})</div>;
   }
 
   return (

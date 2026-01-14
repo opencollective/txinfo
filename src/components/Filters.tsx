@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Check, Coins } from "lucide-react";
-import type { Address, Token, Transaction } from "@/types/index.d.ts";
+import type { Address, Chain, Token, Transaction } from "@/types/index.d.ts";
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, startOfToday } from "date-fns";
 import { truncateAddress } from "@/utils/crypto";
+import { ChainConfig } from '../types/index';
+import chains from "@/chains.json";
 
 type DateRange = {
   start: Date | null;
@@ -45,12 +47,15 @@ export default function Filters({
   transactions,
   onChange,
   accountAddress,
+  chain,
 }: {
   availableTokens: Token[];
   transactions: Transaction[];
   accountAddress: Address;
   onChange: (filter: Filter) => void;
+  chain: Chain;
 }) {
+  const chainConfig = chains[chain];
   const [dateRange, setDateRange] = useState<DateRange>({
     start: null,
     end: null,
@@ -346,7 +351,11 @@ export default function Filters({
                         />
                         {token.symbol}{" "}
                         <span className="text-muted-foreground text-xs">
-                          ({truncateAddress(token.address)})
+                          (
+                          {token.address === "native"
+                            ? chainConfig.native_token?.symbol || "native"
+                            : truncateAddress(token.address)}
+                          )
                         </span>
                       </CommandItem>
                     ))}

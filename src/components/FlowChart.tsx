@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import chains from "@/chains.json";
+import Avatar from "@/components/Avatar";
+import { formatNumber, generateURI, getProfileFromNote } from "@/lib/utils";
+import { useNostr } from "@/providers/NostrProvider";
+import type { Address, Chain, ChainConfig, Token, Transaction } from "@/types";
+import { truncateAddress } from "@/utils/crypto";
 import { ethers } from "ethers";
 import dynamic from "next/dynamic";
-import { useNostr } from "@/providers/NostrProvider";
-import { generateURI, getProfileFromNote, formatNumber } from "@/lib/utils";
-import { truncateAddress } from "@/utils/crypto";
-import Avatar from "@/components/Avatar";
-import type { Transaction, Address, ProfileData } from "@/types";
+import { useCallback, useMemo } from "react";
 
 // Dynamically import Plotly to avoid SSR issues
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -15,8 +16,8 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 interface FlowChartProps {
   transactions: Transaction[];
   accountAddress: Address;
-  chainId: number;
-  tokens: Array<{ address: Address; symbol?: string; decimals?: number }>;
+  chain: Chain;
+  tokens: Array<Token>;
   viewMode: "sankey" | "list";
 }
 
@@ -29,18 +30,19 @@ interface AddressNode {
 export default function FlowChart({
   transactions,
   accountAddress,
-  chainId,
+  chain,
   tokens,
   viewMode,
 }: FlowChartProps) {
   const { notesByURI, subscribeToNotesByURI } = useNostr();
-
+  const chainConfig = chains[chain];
+  const chainId = chainConfig.id;
   // Helper function to check if a transaction is marked as ignored
   const isTransactionIgnored = useCallback(
     (tx: Transaction): boolean => {
-      const uri = generateURI("ethereum", {
+      const uri = generateURI(chainConfig.namespace, {
         chainId,
-        txHash: tx.txHash,
+        txId: tx.txId,
       });
       const notes = notesByURI[uri];
       if (!notes || notes.length === 0) return false;
@@ -51,7 +53,7 @@ export default function FlowChart({
         (tag) => tag[0] === "t" && tag[1] === "ignore"
       );
     },
-    [chainId, notesByURI]
+    [chainConfig.namespace, chainId, notesByURI]
   );
 
   const sankeyData = useMemo(() => {
@@ -70,7 +72,10 @@ export default function FlowChart({
       if (tx.to.toLowerCase() === accountAddress.toLowerCase()) {
         // Money coming in from tx.from
         const from = tx.from.toLowerCase() as Address;
-        const uri = generateURI("ethereum", { chainId, address: from });
+        const uri = generateURI(chainConfig.namespace, {
+          chainId,
+          address: from,
+        });
         subscribeToNotesByURI([uri]);
         const notes = notesByURI[uri];
         const profile = notes?.[0] ? getProfileFromNote(notes[0]) : null;
@@ -83,7 +88,10 @@ export default function FlowChart({
       } else if (tx.from.toLowerCase() === accountAddress.toLowerCase()) {
         // Money going out to tx.to
         const to = tx.to.toLowerCase() as Address;
-        const uri = generateURI("ethereum", { chainId, address: to });
+        const uri = generateURI(chainConfig.namespace, {
+          chainId,
+          address: to,
+        });
         subscribeToNotesByURI([uri]);
         const notes = notesByURI[uri];
         const profile = notes?.[0] ? getProfileFromNote(notes[0]) : null;
@@ -120,7 +128,7 @@ export default function FlowChart({
     });
 
     // Add account node (blue)
-    const accountUri = generateURI("ethereum", {
+    const accountUri = generateURI(chainConfig.namespace, {
       chainId,
       address: accountAddress,
     });
@@ -160,7 +168,10 @@ export default function FlowChart({
 
     // Prepare data for list view with profiles
     const sourcesWithProfiles = topSources.map((source) => {
-      const uri = generateURI("ethereum", { chainId, address: source.address });
+      const uri = generateURI(chainConfig.namespace, {
+        chainId,
+        address: source.address,
+      });
       const notes = notesByURI[uri];
       const profile = notes?.[0] ? getProfileFromNote(notes[0]) : null;
       return {
@@ -174,7 +185,10 @@ export default function FlowChart({
     });
 
     const destinationsWithProfiles = topDestinations.map((dest) => {
-      const uri = generateURI("ethereum", { chainId, address: dest.address });
+      const uri = generateURI(chainConfig.namespace, {
+        chainId,
+        address: dest.address,
+      });
       const notes = notesByURI[uri];
       const profile = notes?.[0] ? getProfileFromNote(notes[0]) : null;
       return {
@@ -204,10 +218,11 @@ export default function FlowChart({
     };
   }, [
     transactions,
-    accountAddress,
+    chainConfig.namespace,
     chainId,
-    notesByURI,
+    accountAddress,
     subscribeToNotesByURI,
+    notesByURI,
     isTransactionIgnored,
   ]);
 
@@ -326,7 +341,7 @@ export default function FlowChart({
             <div className="relative">
               <Avatar
                 profile={{
-                  uri: generateURI("ethereum", {
+                  uri: generateURI(chainConfig.namespace, {
                     chainId,
                     address: accountAddress,
                   }),

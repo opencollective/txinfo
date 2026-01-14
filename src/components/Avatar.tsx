@@ -1,18 +1,19 @@
 import {
-  Avatar as AvatarUI,
   AvatarFallback,
   AvatarImage,
+  Avatar as AvatarUI,
 } from "@/components/ui/avatar";
 import {
+  cn,
   generateAvatar,
-  generateURI,
   getAddressFromURI,
   getChainIdFromURI,
   getChainSlugFromChainId,
 } from "@/lib/utils";
-import { ProfileData } from "@/types";
-import { cn } from "@/lib/utils";
 import { useNostr } from "@/providers/NostrProvider";
+import { ProfileData } from "@/types";
+import { ChainNamespace } from "@/utils/rpcProvider";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function Avatar({
@@ -30,8 +31,9 @@ export default function Avatar({
     if (editable) {
       openEditProfileModal(profile.uri, profile);
     } else {
+      const providerType = profile.uri.split(":")[0] as ChainNamespace;
       const chainId = getChainIdFromURI(profile.uri);
-      const chainName = getChainSlugFromChainId(chainId);
+      const chainName = getChainSlugFromChainId(providerType, chainId);
       const address = getAddressFromURI(profile.uri);
       if (chainName && address) {
         router.push(`/${chainName}/address/${address}`);
@@ -55,7 +57,10 @@ export default function Avatar({
       )}
       {!profile?.name && (
         <AvatarFallback>
-          <img src={generateAvatar(profile?.address as string)} />
+          <Image
+            src={generateAvatar(profile?.address as string)}
+            alt="Avatar"
+          />
         </AvatarFallback>
       )}
     </AvatarUI>
