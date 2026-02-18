@@ -267,71 +267,57 @@ export async function getTxReceipt(
   const blockNumber = receipt?.blockNumber;
   const timestamp = await getBlockTimestamp(chain, blockNumber, provider);
 
-  try {
-    const decoded = contract.interface.parseTransaction({ data: tx.data });
+  // Parse all logs from the receipt to find Transfer events
+  let contract_address = tx.to;
+  const processLog = (log: Log) => {
+    try {
+      // Create a new contract instance with the log's address
+      const logContract = new ethers.Contract(
+        log.address,
+        ERC20_ABI,
+        provider
+      );
+      const parsedLog = logContract.interface.parseLog({
+        topics: log.topics,
+        data: log.data,
+      });
 
-    let contract_address = tx.to;
-    // Parse all logs from the receipt
-    const processLog = (log: Log) => {
-      try {
-        // Create a new contract instance with the log's address
-        const logContract = new ethers.Contract(
-          log.address,
-          ERC20_ABI,
-          provider
-        );
-        const parsedLog = logContract.interface.parseLog({
-          topics: log.topics,
-          data: log.data,
-        });
-
-        // If we find a Transfer event, this is likely the main token contract
-        if (parsedLog?.name === "Transfer") {
-          contract_address = log.address;
-        }
-
-        return {
-          name: parsedLog?.name,
-          args: Array.from(parsedLog?.args || []),
-          address: log.address,
-        };
-      } catch (err) {
-        console.log("Could not parse log:", log, err);
-        return null;
+      // If we find a Transfer event, this is likely the main token contract
+      if (parsedLog?.name === "Transfer") {
+        contract_address = log.address;
       }
-    };
 
-    const events = receipt?.logs.map(processLog);
-    const filteredEvents = events.filter((e) => Boolean(e?.name)); // Remove null entries
+      return {
+        name: parsedLog?.name,
+        args: Array.from(parsedLog?.args || []),
+        address: log.address,
+      };
+    } catch (err) {
+      console.log("Could not parse log:", log, err);
+      return null;
+    }
+  };
 
-    const res = {
-      chainId: Number(tx.chainId),
-      hash: tx.hash,
-      blockNumber,
-      timestamp,
-      contract_address, // This might be different from tx.to if it's a proxy
-      events: filteredEvents,
-    };
+  const events = receipt?.logs.map(processLog);
+  const filteredEvents = events.filter((e) => Boolean(e?.name));
 
-    setItem(
-      `TxReceipt:${tx.hash}`,
-      JSON.stringify(res, (_, value) =>
-        typeof value === "bigint" ? value.toString() : value
-      )
-    );
+  const res = {
+    chainId: Number(tx.chainId),
+    hash: tx.hash,
+    blockNumber,
+    timestamp,
+    contract_address, // This might be different from tx.to if it's a proxy
+    events: filteredEvents,
+  };
 
-    return res as TxReceipt;
-  } catch (error) {
-    console.error("Error decoding transaction:", error);
-    return {
-      chainId: Number(tx.chainId),
-      hash: tx.hash,
-      blockNumber,
-      timestamp,
-      contract_address: tx.to,
-      events: [],
-    };
-  }
+  setItem(
+    `TxReceipt:${tx.hash}`,
+    JSON.stringify(res, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  );
+
+  return res as TxReceipt;
 }
 
 /**
