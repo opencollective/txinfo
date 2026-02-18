@@ -75,8 +75,13 @@ export async function getTokenDetails(
     const cached = localStorage.getItem(key);
     if (cached) {
       const res = JSON.parse(cached);
-      res.cached = true;
-      return res;
+      // Don't serve cached "Unknown Token" results — retry fetching
+      if (res.name === "Unknown Token") {
+        localStorage.removeItem(key);
+      } else {
+        res.cached = true;
+        return res;
+      }
     }
 
     // Validate contract address
@@ -256,8 +261,14 @@ export async function getTxReceipt(
   const tx = await provider.getTransaction(tx_hash);
   if (!tx?.to) return null;
 
-  if (localStorage.getItem(`TxReceipt:${tx.hash}`)) {
-    return JSON.parse(localStorage.getItem(`TxReceipt:${tx.hash}`) || "{}");
+  const cachedReceipt = localStorage.getItem(`TxReceipt:${tx.hash}`);
+  if (cachedReceipt) {
+    const parsed = JSON.parse(cachedReceipt);
+    // Invalidate cache entries without version (pre-fix data may have wrong contract_address)
+    if (parsed._v === 2) {
+      return parsed;
+    }
+    localStorage.removeItem(`TxReceipt:${tx.hash}`);
   }
 
   const contract = new ethers.Contract(tx.to, ERC20_ABI, provider);
@@ -302,6 +313,7 @@ export async function getTxReceipt(
   const filteredEvents = events.filter((e) => Boolean(e?.name));
 
   const res = {
+    _v: 2,
     chainId: Number(tx.chainId),
     hash: tx.hash,
     blockNumber,
